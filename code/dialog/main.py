@@ -4,8 +4,10 @@ import json
 import logging
 import os
 import subprocess
-os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE")
-os.environ["HF_HOME"] = os.getenv("HF_HOME")
+os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/tf_cache")
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/hf_cache")
+# os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE")
+# os.environ["HF_HOME"] = os.getenv("HF_HOME")
 import sys
 import time
 from enum import Enum

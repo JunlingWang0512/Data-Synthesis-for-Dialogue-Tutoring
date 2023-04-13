@@ -1,7 +1,7 @@
 import getpass
 import sys
 
-WORK_DIR = 'work'
+WORK_DIR = '/cluster/scratch/wangjun/faithful-dialogue-master/work'
 IMPORT_PATHS = ['config', 'recipe', 'recipe/']
 
 def TODO():
@@ -21,11 +21,21 @@ def engine():
         default_engine='long')
 
 # Application specific settings
-CACHE_DIR = TODO()
-CODE_ROOT = TODO()
-HF_HOME = TODO()
-PYTHON_EXE = TODO() # Add path to your python executable
-TRANSFORMERS_CACHE = TODO()
+# CACHE_DIR = TODO()
+# CODE_ROOT = TODO()
+# HF_HOME = TODO()
+# PYTHON_EXE = TODO() # Add path to your python executable
+# TRANSFORMERS_CACHE = TODO()
+CACHE_DIR = "/cluster/scratch/wangjun/faithful-dialogue-master/cache"
+# CACHE_DIR = TODO()
+CODE_ROOT = "/cluster/home/wangjun/dialog_inpainting/faithful-dialogue-master/code"
+# CODE_ROOT = TODO()
+HF_HOME = "/cluster/scratch/wangjun/faithful-dialogue-master/hf_cache"
+
+# HF_HOME = TODO()
+PYTHON_EXE = "/cluster/project/sachan/wangjun/anaconda3/envs/master/bin/python"
+# PYTHON_EXE = TODO() # Add path to your python executable
+TRANSFORMERS_CACHE = "/cluster/scratch/wangjun/faithful-dialogue-master/tf_cache"
 IMPORT_PATHS = ['config', 'recipe/']
 SIS_COMMAND = [PYTHON_EXE, sys.argv[0]]
 MAX_PARALLEL = 20
