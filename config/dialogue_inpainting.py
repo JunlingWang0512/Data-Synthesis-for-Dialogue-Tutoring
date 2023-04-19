@@ -21,7 +21,7 @@ code_root = gs.CODE_ROOT
 
 def train_model(method, model_name_or_path, dataset, dataset_config_name, model_description, per_device_train_batch_size=4, gradient_accumulation_steps=8,
                 dataset_train_split="train", dataset_val_split="validation", num_epochs=10, time_rqmt=24, mem_rqmt=24, gpu_mem=10, learning_rate=6.25e-5,
-                per_device_eval_batch_size=8):
+                per_device_eval_batch_size=8): #junling modify
     config = {
         'model_name_or_path': model_name_or_path,
         'predict_with_generate': True,
@@ -618,9 +618,9 @@ async def task_arithmetic():
     config = {
         "method": "document_grounded_generation",
         "model_name_or_path": "google/flan-t5-base",
-        "model_description": "flan_t5_base_baseline",
-        "train_dataset": "wow_DI",
-        "test_datasets": ["wow_DI"],
+        "model_description": "flan_t5_dialogue_inpainting",
+        "train_dataset": "wow",
+        "test_datasets": ["wow"],
         "train_dataset_config_name": "response_generation",
         "test_dataset_config_name": "response_generation",
         "expert_dataset_name": "wow",
@@ -639,7 +639,7 @@ async def task_arithmetic():
         "num_expert_epochs": 5,
         "gpu_mem_fisher": 12
     }
-
+# "train[:20%]",
     run_models(**config)
 
     # config = { #junling modify

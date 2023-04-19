@@ -4,8 +4,10 @@ import json
 import logging
 import os
 import subprocess
-os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/tf_cache")
-os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/hf_cache")
+
+
+os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting4_19_0.5_full/tf_cache")
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting4_19_0.5_full/hf_cache")
 # os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE")
 # os.environ["HF_HOME"] = os.getenv("HF_HOME")
 import sys
@@ -31,6 +33,7 @@ from transformers import (
 )
 from transformers.trainer_utils import is_main_process, PredictionOutput, get_last_checkpoint
 
+from dialog.methods.dialogue_inpainting_method import DialogueInpaintingMethod #junling modify
 from dialog.arguments import *
 from dialog.methods.base import Method, TaskType
 from dialog.methods.generation import ResponseGenerationMethod, DocumentGroundedGenerationMethod, \
@@ -45,6 +48,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.NOTSET)
 logger = logging.getLogger(__name__)
 os.environ["WANDB_DISABLED"] = "true"
 
+
 method_classes = [
     Seq2SeqMethod,
     DocumentGroundedGenerationMethod,
@@ -55,7 +59,8 @@ method_classes = [
     DocumentGroundedGenerationWithDensityRatioMethod,
     ResponseGenerationMethod,
     ChannelModelMethod,
-    NoisyChannelModelMethod
+    NoisyChannelModelMethod,
+    DialogueInpaintingMethod,  # junling modify
 ]
 
 
@@ -113,7 +118,7 @@ def get_config_class(model_args):
     elif "noisy_channel" in model_args.method:
         return NoisyChannelConfig
     else:
-        return AutoConfig
+        return AutoConfig #I use autoconfig
 
 
 def get_tokenizer_name(config, model_args):
@@ -206,7 +211,7 @@ def main(run_mode: RunMode):
         raise Exception(f"No method class for name {model_args.method}.")
     method_definition: Method = method_class(
         model_args, data_args, config, tokenizer)
-
+#junling need modify
     # Set seed before initializing model.
     set_seed(training_args.seed)
 

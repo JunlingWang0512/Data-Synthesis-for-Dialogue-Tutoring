@@ -79,6 +79,9 @@ class DocumentGroundedGenerationMethod(Seq2SeqMethod):
     name = "document_grounded_generation"
 
     def preprocess_features(self, features):
+        #write features into a txt file
+        # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features.txt', 'w') as f:
+        #         f.write(str(features))
         processor = DocumentGroundedPreprocessor(self.config, self.data_args, self.model_args, self.tokenizer)
         input_ids, labels = processor.preprocess(features)
 
@@ -88,7 +91,8 @@ class DocumentGroundedGenerationMethod(Seq2SeqMethod):
 
         if self.data_args.is_training:
             return_dict["labels"] = labels
-
+        # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/return_dict.txt', 'w') as f:
+        #         f.write(str(return_dict))
         return return_dict
 
     def get_special_tokens(self):

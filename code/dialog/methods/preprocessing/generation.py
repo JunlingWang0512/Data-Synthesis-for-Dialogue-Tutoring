@@ -1,5 +1,5 @@
 import itertools
-
+import random
 from dialog.methods.preprocessing.base import Preprocessor
 
 class Seq2SeqPreprocessor(Preprocessor):
@@ -38,18 +38,73 @@ class DocumentGroundedPreprocessor(Preprocessor):
             knowledge = knowledge[:self.model_args.knowledge_max_tokens]
         return knowledge
 
-    def preprocess(self, features):
+    # def preprocess(self, features):#original code
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
+    #     #         f.write(str(features))
+    #     sequences, labels = [], []
+    #     for context, dialog_act, knowledge, response in zip(
+    #             features["context"],
+    #             features["dialog_act"],
+    #             features["knowledge"],
+    #             features["response"]
+    #     ):
+    #         context = self._process_dialog_context(context)
+    #         response = self._process_response(response)
+    #         knowledge = self._process_knowledge(knowledge)
+    #         dialog_act = self.tokenizer(dialog_act, add_special_tokens=False)["input_ids"]
+
+    #         bos_token_needed = self.tokenizer.bos_token is not None
+    #         full_sequence = [[self.tokenizer.bos_token_id]] if bos_token_needed else []
+
+    #         full_sequence += [
+    #             dialog_act,
+    #             [self.tokenizer.convert_tokens_to_ids(self.model_args.knowledge_tag_token)],
+    #             knowledge,
+    #             context,
+    #             [self.tokenizer.eos_token_id]
+    #         ]
+
+    #         full_sequence = list(itertools.chain.from_iterable(full_sequence))
+
+    #         sequences.append(full_sequence)
+    #         labels.append(response)
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/sequences_preprocess_output.txt', 'w') as f:
+    #     #     f.write(str(features))
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
+    #     #     f.write(str(features))
+    #     return sequences, labels
+    def preprocess(self, features):#junling modify
+        # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
+        #         f.write(str(features))
         sequences, labels = [], []
+        mark_ratio = 0.5
         for context, dialog_act, knowledge, response in zip(
                 features["context"],
                 features["dialog_act"],
                 features["knowledge"],
                 features["response"]
         ):
+            #--junling modify--start
+            mark = False
+            mark_content = ''
+            if random.random() < mark_ratio:
+                mark = True
+                if len(context) > 0 and random.random() < 0.5:
+                    mark_content = context[-1]['text']
+                    context[-1]['text'] = '<extra_id_0>'
+                    
+                else:
+                    mark_content = response
+                    response = '<extra_id_0>'
+            # if not mark:
+            #     mark_content = ''
+            
             context = self._process_dialog_context(context)
             response = self._process_response(response)
             knowledge = self._process_knowledge(knowledge)
             dialog_act = self.tokenizer(dialog_act, add_special_tokens=False)["input_ids"]
+            label = self._process_response(mark_content)    
+            #--junling modify--end
 
             bos_token_needed = self.tokenizer.bos_token is not None
             full_sequence = [[self.tokenizer.bos_token_id]] if bos_token_needed else []
@@ -65,8 +120,10 @@ class DocumentGroundedPreprocessor(Preprocessor):
             full_sequence = list(itertools.chain.from_iterable(full_sequence))
 
             sequences.append(full_sequence)
-            labels.append(response)
-
+            #--junling modify--start
+            labels.append(label)
+            #--junling modify--end
+        
         return sequences, labels
 
 class DocumentGroundedPreprocessorWithKnowledgeLabels(DocumentGroundedPreprocessor):

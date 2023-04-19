@@ -11,7 +11,7 @@ class Method(abc.ABC):
         self.data_args = data_args
         self.config = config
         self.tokenizer = tokenizer
-
+        # import ipdb;ipdb.set_trace()
         tokenizer.add_special_tokens({
             "additional_special_tokens": sorted(self.get_special_tokens())
             })
@@ -74,7 +74,7 @@ class Method(abc.ABC):
             config_names = [config_name]
 
         all_datasets = []
-
+        
         for config_name in config_names:
             all_datasets.append(load_dataset(
                     dataset,
@@ -108,6 +108,8 @@ class Method(abc.ABC):
             load_from_cache_file=False
             #remove_columns=old_eval_column_names,
             )
+        # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/dataset.txt', 'w') as f:
+        #         f.write(str(dataset))
         return dataset
 
     def get_train_dataset(self):
