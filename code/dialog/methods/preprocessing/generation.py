@@ -77,7 +77,7 @@ class DocumentGroundedPreprocessor(Preprocessor):
         # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
         #         f.write(str(features))
         sequences, labels = [], []
-        mark_ratio = 0.5
+        # mask_ratio = 0.5
         for context, dialog_act, knowledge, response in zip(
                 features["context"],
                 features["dialog_act"],
@@ -85,25 +85,25 @@ class DocumentGroundedPreprocessor(Preprocessor):
                 features["response"]
         ):
             #--junling modify--start
-            mark = False
-            mark_content = ''
-            if random.random() < mark_ratio:
-                mark = True
-                if len(context) > 0 and random.random() < 0.5:
-                    mark_content = context[-1]['text']
-                    context[-1]['text'] = '<extra_id_0>'
-                    
-                else:
-                    mark_content = response
-                    response = '<extra_id_0>'
-            # if not mark:
-            #     mark_content = ''
+            # mask = False
+            mask_content = ''
+            # if random.random() < mask_ratio:
+            # mask = True
+            if len(context) > 0 and random.random() < 0.5:
+                mask_content = context[-1]['text']
+                context[-1]['text'] = '<extra_id_0>'
+                
+            else:
+                mask_content = response
+                response = '<extra_id_0>'
+            # if not mask:
+            #     mask_content = ''
             
             context = self._process_dialog_context(context)
             response = self._process_response(response)
             knowledge = self._process_knowledge(knowledge)
             dialog_act = self.tokenizer(dialog_act, add_special_tokens=False)["input_ids"]
-            label = self._process_response(mark_content)    
+            label = self._process_response(mask_content)    
             #--junling modify--end
 
             bos_token_needed = self.tokenizer.bos_token is not None

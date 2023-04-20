@@ -6,8 +6,8 @@ import os
 import subprocess
 
 
-os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting4_19_0.5_full/tf_cache")
-os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting4_19_0.5_full/hf_cache")
+os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting4_20_full/tf_cache")
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting4_20_full/hf_cache")
 # os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE")
 # os.environ["HF_HOME"] = os.getenv("HF_HOME")
 import sys
