@@ -2,8 +2,9 @@
 # import itertools
 
 # from dialog.methods.preprocessing.base import Preprocessor
-
+import time
 import random
+import numpy as np
 # def get_tokenizer_name(config, model_args):
 #     if "density_ratio" in model_args.method:
 #         return config.language_model_tokenizer_name_or_path
@@ -92,27 +93,34 @@ def preprocess(features):#junling modify
 #     with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
 #             f.write(str(features))
     sequences, labels = [], []
-    filename = 'test_generation_output2.txt'
+    filename = 'test_generation_output4.txt'
     count = 1
     mark_ratio=0.8
+    index_to_mask = 0 #initialize
     with open(filename, 'w') as f:
-        for context, dialog_act, knowledge, response in zip(
+        for context, dialog_act, response in zip(
                 features["context"],
                 features["dialog_act"],
-                features["knowledge"],
+                # features["knowledge"],
                 features["response"]
         ):
-            mark_response = False
-            mark_content = ''
-            if random.random() < mark_ratio:
-                if len(context) > 0 and random.random() < 0.5:
-                    mark_content = context[-1]['text']
-                    context[-1]['text'] = '<extra_id_0>'
-                    
-                else:
-                    mark_content = response
-                    response = '<extra_id_0>'
-                    mark_response = True
+            # Add response to the context
+            context.append({'text': response, 'user': 'system', 'dialog_act': ''})
+            mask_content = ''
+            
+            #--VERSION2 MASK UTTERANCE AT RANDOM--
+            if len(context) > 0:
+                # random.seed(int(time.time()))
+                # Generate a random index to choose from context
+                previous_index = index_to_mask
+                index_to_mask = np.random.randint(0, len(context))
+                # index_to_mask = random.randint(0, len(context) - 1)
+                if(index_to_mask==previous_index):
+                    index_to_mask = np.random.randint(0, len(context))
+                    # index_to_mask = random.randint(0, len(context) - 1)
+                # Mask a 'text' in the context
+                mask_content = context[index_to_mask]['text']
+                context[index_to_mask]['text'] = '<extra_id_0>'
             # context = _process_dialog_context(context)
             # response = _process_response(response)
             # knowledge = _process_knowledge(knowledge)
@@ -139,9 +147,11 @@ def preprocess(features):#junling modify
             count += 1
             f.write(f'context: {context}\n')
             f.write(f'dialog_act: {dialog_act}\n')
-            f.write(f'knowledge: {knowledge}\n')
-            f.write(f'response: {response}\n')
-            f.write(f'mark_content: {mark_content}\n')
+            # f.write(f'knowledge: {knowledge}\n')
+            # f.write(f'label: {label}\n')
+            f.write(f'mask_content: {mask_content}\n')
+            f.write(f'index_to_mask: {index_to_mask}\n')
+            f.write(f'len(context): {len(context)}\n')
             f.write('\n')  # add a blank line between iterations
 
 

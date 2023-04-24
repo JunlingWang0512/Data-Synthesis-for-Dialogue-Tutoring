@@ -1,7 +1,8 @@
 import itertools
 import random
 from dialog.methods.preprocessing.base import Preprocessor
-
+import time
+import numpy as np
 class Seq2SeqPreprocessor(Preprocessor):
 
     def preprocess(self, features):
@@ -73,46 +74,47 @@ class DocumentGroundedPreprocessor(Preprocessor):
     #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
     #     #     f.write(str(features))
     #     return sequences, labels
-    def preprocess(self, features):#junling modify
-        # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
-        #         f.write(str(features))
+    def preprocess(self, features):
         sequences, labels = [], []
-        # mask_ratio = 0.5
-        for context, dialog_act, knowledge, response in zip(
+        index_to_mask = 0 #initialize
+        for context, dialog_act, response in zip(
                 features["context"],
                 features["dialog_act"],
-                features["knowledge"],
+                # features["knowledge"],
                 features["response"]
         ):
-            #--junling modify--start
-            # mask = False
+            # Add response to the context
+            context.append({'text': response, 'user': 'system', 'dialog_act': ''})
             mask_content = ''
-            # if random.random() < mask_ratio:
-            # mask = True
-            if len(context) > 0 and random.random() < 0.5:
-                mask_content = context[-1]['text']
-                context[-1]['text'] = '<extra_id_0>'
+
+            #--VERSION2 MASK UTTERANCE AT RANDOM--
+            if len(context) > 0:
+                previous_index = index_to_mask
+                # Generate a random index to choose from context
+                index_to_mask = np.random.randint(0, len(context))
+                # random.seed(int(time.time()))
+                # index_to_mask = random.randint(0, len(context) - 1)
+                if(index_to_mask==previous_index):
+                    index_to_mask = np.random.randint(0, len(context))
                 
-            else:
-                mask_content = response
-                response = '<extra_id_0>'
-            # if not mask:
-            #     mask_content = ''
+                
+
+                # Mask a 'text' in the context
+                mask_content = context[index_to_mask]['text']
+                context[index_to_mask]['text'] = '<extra_id_0>'
             
+            #--VERSION2 MASK UTTERANCE AT RANDOM--
+
             context = self._process_dialog_context(context)
-            response = self._process_response(response)
-            knowledge = self._process_knowledge(knowledge)
+            # response = self._process_response(response)
             dialog_act = self.tokenizer(dialog_act, add_special_tokens=False)["input_ids"]
-            label = self._process_response(mask_content)    
-            #--junling modify--end
+            label = self._process_response(mask_content)
 
             bos_token_needed = self.tokenizer.bos_token is not None
             full_sequence = [[self.tokenizer.bos_token_id]] if bos_token_needed else []
 
             full_sequence += [
                 dialog_act,
-                [self.tokenizer.convert_tokens_to_ids(self.model_args.knowledge_tag_token)],
-                knowledge,
                 context,
                 [self.tokenizer.eos_token_id]
             ]
@@ -120,11 +122,10 @@ class DocumentGroundedPreprocessor(Preprocessor):
             full_sequence = list(itertools.chain.from_iterable(full_sequence))
 
             sequences.append(full_sequence)
-            #--junling modify--start
             labels.append(label)
-            #--junling modify--end
-        
+
         return sequences, labels
+
 
 class DocumentGroundedPreprocessorWithKnowledgeLabels(DocumentGroundedPreprocessor):
 
