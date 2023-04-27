@@ -74,9 +74,48 @@ class DocumentGroundedPreprocessor(Preprocessor):
     #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
     #     #     f.write(str(features))
     #     return sequences, labels
-    def preprocess(self, features):
+    # def preprocess(self, features):#no knowledge
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
+    #     #         f.write(str(features))
+    #     sequences, labels = [], []
+    #     for context, dialog_act, response in zip(
+    #             features["context"],
+    #             features["dialog_act"],
+    #             # features["knowledge"],
+    #             features["response"]
+    #     ):
+    #         context = self._process_dialog_context(context)
+    #         response = self._process_response(response)
+    #         # knowledge = self._process_knowledge(knowledge)
+    #         dialog_act = self.tokenizer(dialog_act, add_special_tokens=False)["input_ids"]
+
+    #         bos_token_needed = self.tokenizer.bos_token is not None
+    #         full_sequence = [[self.tokenizer.bos_token_id]] if bos_token_needed else []
+
+    #         full_sequence += [
+    #             dialog_act,
+    #             # [self.tokenizer.convert_tokens_to_ids(self.model_args.knowledge_tag_token)],
+    #             # knowledge,
+    #             context,
+    #             [self.tokenizer.eos_token_id]
+    #         ]
+
+    #         full_sequence = list(itertools.chain.from_iterable(full_sequence))
+
+    #         sequences.append(full_sequence)
+    #         labels.append(response)
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/sequences_preprocess_output.txt', 'w') as f:
+    #     #     f.write(str(features))
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
+    #     #     f.write(str(features))
+    #     return sequences, labels
+    def preprocess(self, features): #dialogue inpainting
         sequences, labels = [], []
+        mask_contents = []
         index_to_mask = 0 #initialize
+        with open('/cluster/scratch/wangjun/temp2/features_len.txt', 'w') as f:
+                f.write(str(len(features)))
+        
         for context, dialog_act, response in zip(
                 features["context"],
                 features["dialog_act"],
@@ -102,11 +141,13 @@ class DocumentGroundedPreprocessor(Preprocessor):
                 # Mask a 'text' in the context
                 mask_content = context[index_to_mask]['text']
                 context[index_to_mask]['text'] = '<extra_id_0>'
+            mask_contents.append(mask_content)
             
             #--VERSION2 MASK UTTERANCE AT RANDOM--
 
             context = self._process_dialog_context(context)
             # response = self._process_response(response)
+            # response = self._process_response(mask_content) #junling modify
             dialog_act = self.tokenizer(dialog_act, add_special_tokens=False)["input_ids"]
             label = self._process_response(mask_content)
 
@@ -123,7 +164,11 @@ class DocumentGroundedPreprocessor(Preprocessor):
 
             sequences.append(full_sequence)
             labels.append(label)
-
+        import pickle
+        # Save mask_contents to a pickle file
+        with open("/cluster/scratch/wangjun/temp2/mask_contents.pkl", "wb") as f:
+            pickle.dump(mask_contents, f)
+        # return sequences, labels
         return sequences, labels
 
 

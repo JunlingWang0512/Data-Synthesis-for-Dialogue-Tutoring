@@ -135,6 +135,7 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
                         time_rqmt=2, mem_rqmt=24, gpu_mem_train=10, gpu_mem_test=10, gpu_mem_fisher=10, num_epochs=10, fisher_estimation_method="fisher_approx_document_grounded_generation",
                         calculate_fisher_norms=False, num_expert_epochs=5):
     # Train all models
+    #debug junling one search job one evaluation job
     if baseline_model_name_or_path is None:
         baseline_model = train_model(
             method,
@@ -154,58 +155,58 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
     else: 
         baseline_model = baseline_model_name_or_path
 
-    if anti_expert_model_name_or_path is None:
-        anti_expert_model = train_model(
-            method,
-            baseline_model,
-            anti_expert_dataset_name,
-            anti_expert_dataset_config_name,
-            f"{model_description}_anti_expert",
-            gpu_mem=gpu_mem_train,
-            per_device_train_batch_size=per_device_train_batch_size,
-            gradient_accumulation_steps=gradient_accumulation_steps,
-            per_device_eval_batch_size=per_device_eval_batch_size,
-            dataset_train_split=dataset_train_split,
-            dataset_val_split=dataset_val_split,
-            num_epochs=num_expert_epochs
-        ).out_models[num_expert_epochs]
-    else:
-        anti_expert_model = anti_expert_model_name_or_path
+    # if anti_expert_model_name_or_path is None: #junling modify
+    #     anti_expert_model = train_model(
+    #         method,
+    #         baseline_model,
+    #         anti_expert_dataset_name,
+    #         anti_expert_dataset_config_name,
+    #         f"{model_description}_anti_expert",
+    #         gpu_mem=gpu_mem_train,
+    #         per_device_train_batch_size=per_device_train_batch_size,
+    #         gradient_accumulation_steps=gradient_accumulation_steps,
+    #         per_device_eval_batch_size=per_device_eval_batch_size,
+    #         dataset_train_split=dataset_train_split,
+    #         dataset_val_split=dataset_val_split,
+    #         num_epochs=num_expert_epochs
+    #     ).out_models[num_expert_epochs]
+    # else:
+    #     anti_expert_model = anti_expert_model_name_or_path
 
-    if expert_model_name_or_path is None:
-        expert_model = train_model(
-            method,
-            baseline_model,
-            expert_dataset_name,
-            expert_dataset_config_name,
-            f"{model_description}_expert",
-            gpu_mem=gpu_mem_train,
-            per_device_train_batch_size=per_device_train_batch_size,
-            gradient_accumulation_steps=gradient_accumulation_steps,
-            per_device_eval_batch_size=per_device_eval_batch_size,
-            dataset_train_split=dataset_train_split,
-            dataset_val_split=dataset_val_split,
-            num_epochs=num_expert_epochs
-        ).out_models[num_expert_epochs]
-    else:
-        expert_model = expert_model_name_or_path
+    # if expert_model_name_or_path is None: #junling modify
+    #     expert_model = train_model(
+    #         method,
+    #         baseline_model,
+    #         expert_dataset_name,
+    #         expert_dataset_config_name,
+    #         f"{model_description}_expert",
+    #         gpu_mem=gpu_mem_train,
+    #         per_device_train_batch_size=per_device_train_batch_size,
+    #         gradient_accumulation_steps=gradient_accumulation_steps,
+    #         per_device_eval_batch_size=per_device_eval_batch_size,
+    #         dataset_train_split=dataset_train_split,
+    #         dataset_val_split=dataset_val_split,
+    #         num_epochs=num_expert_epochs
+    #     ).out_models[num_expert_epochs]
+    # else:
+    #     expert_model = expert_model_name_or_path
 
     # Noisy Channel
 
-    channel_model = train_model(
-        "channel_model",
-        baseline_model,
-        train_dataset,
-        "response_generation",
-        f"{model_description}_channel_model",
-        gpu_mem=gpu_mem_train,
-        per_device_train_batch_size=per_device_train_batch_size,
-        gradient_accumulation_steps=gradient_accumulation_steps,
-        per_device_eval_batch_size=per_device_eval_batch_size,
-        dataset_train_split=dataset_train_split,
-        dataset_val_split=dataset_val_split,
-        num_epochs=num_expert_epochs
-    ).out_models[num_expert_epochs]
+    # channel_model = train_model( #junling modify
+    #     "channel_model",
+    #     baseline_model,
+    #     train_dataset,
+    #     "response_generation",
+    #     f"{model_description}_channel_model",
+    #     gpu_mem=gpu_mem_train,
+    #     per_device_train_batch_size=per_device_train_batch_size,
+    #     gradient_accumulation_steps=gradient_accumulation_steps,
+    #     per_device_eval_batch_size=per_device_eval_batch_size,
+    #     dataset_train_split=dataset_train_split,
+    #     dataset_val_split=dataset_val_split,
+    #     num_epochs=num_expert_epochs
+    # ).out_models[num_expert_epochs]
 
     response_generation_model = train_model(
         "response_generation",
@@ -222,32 +223,32 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
         num_epochs=num_expert_epochs
     ).out_models[num_expert_epochs]
 
-    noisy_channel_model = CreateNoisyChannelCheckpointJob(
-        code_root,
-        baseline_model,
-        channel_model,
-        response_generation_model,
-        0.5,
-        0.2,
-        1.0,
-    ).out_model_path
+    # noisy_channel_model = CreateNoisyChannelCheckpointJob( #junling modify
+    #     code_root,
+    #     baseline_model,
+    #     channel_model,
+    #     response_generation_model,
+    #     0.5,
+    #     0.2,
+    #     1.0,
+    # ).out_model_path
 
     for test_dataset in test_datasets:
 
         # noisy channel
 
-        evaluate_model(
-            "noisy_channel_reranking",
-            noisy_channel_model,
-            test_dataset,
-            test_dataset_config_name,
-            model_description,
-            gpu_mem=gpu_mem_test,
-            dataset_test_split=dataset_test_split,
-            per_device_eval_batch_size=1, # not implemented for batched inference yet
-            calculate_q2=True,
-            time_rqmt=6
-        )
+        # evaluate_model( #junling modify
+        #     "noisy_channel_reranking",
+        #     noisy_channel_model,
+        #     test_dataset,
+        #     test_dataset_config_name,
+        #     model_description,
+        #     gpu_mem=gpu_mem_test,
+        #     dataset_test_split=dataset_test_split,
+        #     per_device_eval_batch_size=1, # not implemented for batched inference yet
+        #     calculate_q2=True,
+        #     time_rqmt=6
+        # )
 
         # baseline
 
@@ -272,7 +273,8 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
                 code_root,
                 baseline_model,
                 [],
-                [anti_expert_model],
+                # [anti_expert_model],
+                [],#junling modify
                 scaling_factors_experts=[],
                 scaling_factors_anti_experts=[scaling_factor]
             ).out_model_path
@@ -294,8 +296,8 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
                 new_model = MakeAndApplyTaskVectorsCapeJob(
                     code_root,
                     baseline_model,
-                    expert_model,
-                    anti_expert_model,
+                    # expert_model,
+                    # anti_expert_model,
                     operation="negation",
                     scaling_factor=scaling_factor
                 ).out_model_path
@@ -311,25 +313,25 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
                 )
 
             # DExperts
-            new_model = CreateDensityRatioCheckpointJob(
-                code_root,
-                baseline_model,
-                anti_expert_model,
-                expert_model,
-                0.5,
-                0.2
-            ).out_model_path
+            # new_model = CreateDensityRatioCheckpointJob(
+            #     code_root,
+            #     baseline_model,
+            #     anti_expert_model,
+            #     expert_model,
+            #     0.5,
+            #     0.2
+            # ).out_model_path
 
-            evaluate_model(
-                "document_grounded_generation_density_ratio",
-                new_model,
-                test_dataset,
-                test_dataset_config_name,
-                model_description+"_DExperts",
-                gpu_mem=int(gpu_mem_test*1.5),
-                dataset_test_split=dataset_test_split,
-                calculate_q2=False
-            )
+            # evaluate_model(
+            #     "document_grounded_generation_density_ratio",
+            #     new_model,
+            #     test_dataset,
+            #     test_dataset_config_name,
+            #     model_description+"_DExperts",
+            #     gpu_mem=int(gpu_mem_test*1.5),
+            #     dataset_test_split=dataset_test_split,
+            #     calculate_q2=False
+            # )
 
         # EWR
         if baseline_fisher_path is None:
@@ -346,57 +348,57 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
         else:
             fisher_base = baseline_fisher_path
 
-        task_vector = MakeTaskVectorsJob(
-            code_root,
-            baseline_model,
-            anti_expert_model,
-            operation="negation"
-        ).out_model_path
+        # task_vector = MakeTaskVectorsJob(
+        #     code_root,
+        #     baseline_model,
+        #     anti_expert_model,
+        #     operation="negation"
+        # ).out_model_path
         
-        if anti_expert_fisher_path is None:
-            fisher_task_vector = calculate_fisher_information(
-                fisher_estimation_method,
-                task_vector,
-                train_dataset,
-                train_dataset_config_name,
-                model_description,
-                dataset_test_split=dataset_val_split if not dataset_val_split == dataset_test_split else dataset_train_split,
-                time_rqmt=4,
-                gpu_mem=gpu_mem_fisher
-            )
-        else:
-            fisher_task_vector = anti_expert_fisher_path
+        # if anti_expert_fisher_path is None:
+        #     fisher_task_vector = calculate_fisher_information(
+        #         fisher_estimation_method,
+        #         task_vector,
+        #         train_dataset,
+        #         train_dataset_config_name,
+        #         model_description,
+        #         dataset_test_split=dataset_val_split if not dataset_val_split == dataset_test_split else dataset_train_split,
+        #         time_rqmt=4,
+        #         gpu_mem=gpu_mem_fisher
+        #     )
+        # else:
+        #     fisher_task_vector = anti_expert_fisher_path
 
-        if not train_dataset_config_name == expert_dataset_config_name:
+        # if not train_dataset_config_name == expert_dataset_config_name: #junling modify
 
-            task_vector_cape = MakeTaskVectorsJob(
-                code_root,
-                expert_model,
-                anti_expert_model,
-                operation="negation"
-            ).out_model_path
+            # task_vector_cape = MakeTaskVectorsJob(
+            #     code_root,
+            #     expert_model,
+            #     anti_expert_model,
+            #     operation="negation"
+            # ).out_model_path
 
-            fisher_task_vector_cape = calculate_fisher_information(
-                fisher_estimation_method,
-                task_vector_cape,
-                train_dataset,
-                train_dataset_config_name,
-                model_description,
-                dataset_test_split=dataset_val_split if not dataset_val_split == dataset_test_split else dataset_train_split,
-                time_rqmt=4,
-                gpu_mem=gpu_mem_fisher
-            )
+            # fisher_task_vector_cape = calculate_fisher_information(
+            #     fisher_estimation_method,
+            #     task_vector_cape,
+            #     train_dataset,
+            #     train_dataset_config_name,
+            #     model_description,
+            #     dataset_test_split=dataset_val_split if not dataset_val_split == dataset_test_split else dataset_train_split,
+            #     time_rqmt=4,
+            #     gpu_mem=gpu_mem_fisher
+            # )
 
-            fisher_expert = calculate_fisher_information(
-                fisher_estimation_method,
-                expert_model,
-                train_dataset,
-                train_dataset_config_name,
-                model_description,
-                dataset_test_split=dataset_val_split if not dataset_val_split == dataset_test_split else dataset_train_split,
-                time_rqmt=4,
-                gpu_mem=gpu_mem_fisher
-            )
+            # fisher_expert = calculate_fisher_information(
+            #     fisher_estimation_method,
+            #     expert_model,
+            #     train_dataset,
+            #     train_dataset_config_name,
+            #     model_description,
+            #     dataset_test_split=dataset_val_split if not dataset_val_split == dataset_test_split else dataset_train_split,
+            #     time_rqmt=4,
+            #     gpu_mem=gpu_mem_fisher
+            # )
 
 
         for scaling_factor in [0.15]:
@@ -406,10 +408,11 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
                 code_root,
                 baseline_model,
                 [],
-                [anti_expert_model],
+                # [anti_expert_model],
+                [],#junling modify
                 fisher_base,
                 [],
-                [fisher_task_vector],
+                # [fisher_task_vector],
                 scaling_factors_experts=[],
                 scaling_factors_anti_experts=[scaling_factor]
             ).out_model_path
@@ -425,27 +428,27 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
                 calculate_q2=scaling_factor == 0.15
             )
             
-            if not train_dataset_config_name == expert_dataset_config_name:
-                new_model = MakeAndApplyTaskVectorsCapeWithFisherJob(
-                    code_root,
-                    expert_model,
-                    expert_model,
-                    anti_expert_model,
-                    fisher_expert,
-                    fisher_task_vector_cape,
-                    operation="negation",
-                    scaling_factor=scaling_factor
-                ).out_model_path
+            # if not train_dataset_config_name == expert_dataset_config_name: #junling modify
+            #     new_model = MakeAndApplyTaskVectorsCapeWithFisherJob(
+            #         code_root,
+            #         expert_model,
+            #         expert_model,
+            #         anti_expert_model,
+            #         fisher_expert,
+            #         fisher_task_vector_cape,
+            #         operation="negation",
+            #         scaling_factor=scaling_factor
+            #     ).out_model_path
 
-                evaluate_model(
-                    method,
-                    new_model,
-                    test_dataset,
-                    test_dataset_config_name,
-                    model_description+"_task_arithmetic_cape_ewr_"+str(scaling_factor),
-                    gpu_mem=gpu_mem_test,
-                    dataset_test_split=dataset_test_split
-                )
+            #     evaluate_model(
+            #         method,
+            #         new_model,
+            #         test_dataset,
+            #         test_dataset_config_name,
+            #         model_description+"_task_arithmetic_cape_ewr_"+str(scaling_factor),
+            #         gpu_mem=gpu_mem_test,
+            #         dataset_test_split=dataset_test_split
+            #     )
 
 def run_ctrl(method=None, model_name_or_path=None, train_dataset=None, train_dataset_config_name=None, test_datasets=None, baseline_model_name_or_path=None,
                         test_dataset_config_name=None, model_description=None, anti_expert_model_name_or_path=None, expert_model_name_or_path=None,
@@ -535,7 +538,8 @@ def run_ctrl(method=None, model_name_or_path=None, train_dataset=None, train_dat
                 code_root,
                 baseline_model,
                 [],
-                [anti_expert_model],
+                # [anti_expert_model],
+                [],#junling modify
                 scaling_factor_experts=[],
                 scaling_factor_anti_experts=[scaling_factor]
             ).out_model_path
@@ -569,7 +573,7 @@ def run_ctrl(method=None, model_name_or_path=None, train_dataset=None, train_dat
         task_vector = MakeTaskVectorsJob(
             code_root,
             baseline_model,
-            anti_expert_model,
+            # anti_expert_model,
             operation="negation"
         ).out_model_path
         
@@ -595,7 +599,8 @@ def run_ctrl(method=None, model_name_or_path=None, train_dataset=None, train_dat
                 code_root,
                 baseline_model,
                 [],
-                [anti_expert_model],
+                # [anti_expert_model],
+                [],#junling modify
                 fisher_base,
                 [],
                 [fisher_task_vector],
@@ -627,8 +632,8 @@ async def task_arithmetic():
         "anti_expert_dataset_name": "faithdial",
         "expert_dataset_config_name": "cape_expert",
         "anti_expert_dataset_config_name": "hallucinated_response",
-        "dataset_train_split": "train",   #"train[:5%]"
-        "dataset_val_split": "validation", 
+        "dataset_train_split": "train",
+        "dataset_val_split": "validation",
         "dataset_test_split": "test",
         "per_device_train_batch_size": 4,
         "gradient_accumulation_steps": 8,
