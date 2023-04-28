@@ -112,6 +112,7 @@ class DocumentGroundedPreprocessor(Preprocessor):
     def preprocess(self, features): #dialogue inpainting
         sequences, labels = [], []
         mask_contents = []
+        responses = []
         index_to_mask = 0 #initialize
         with open('/cluster/scratch/wangjun/temp2/features_len.txt', 'w') as f:
                 f.write(str(len(features)))
@@ -125,7 +126,7 @@ class DocumentGroundedPreprocessor(Preprocessor):
             # Add response to the context
             context.append({'text': response, 'user': 'system', 'dialog_act': ''})
             mask_content = ''
-
+            responses.append(response)
             #--VERSION2 MASK UTTERANCE AT RANDOM--
             if len(context) > 0:
                 previous_index = index_to_mask
@@ -168,8 +169,10 @@ class DocumentGroundedPreprocessor(Preprocessor):
         # Save mask_contents to a pickle file
         with open("/cluster/scratch/wangjun/temp2/mask_contents.pkl", "wb") as f:
             pickle.dump(mask_contents, f)
+        with open("/cluster/scratch/wangjun/temp2/responses.pkl", "wb") as f:
+            pickle.dump(responses, f)
         # return sequences, labels
-        return sequences, labels
+        return sequences, labels, mask_contents #junling modify
 
 
 class DocumentGroundedPreprocessorWithKnowledgeLabels(DocumentGroundedPreprocessor):

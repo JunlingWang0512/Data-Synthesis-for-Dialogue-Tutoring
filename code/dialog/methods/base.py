@@ -102,45 +102,73 @@ class Method(abc.ABC):
         old_eval_column_names = dataset.column_names
         
         
-        
-        
-
-        dataset = dataset.map(
-            self.preprocess_features_and_maybe_normalize,
-            batched=True,
-            batch_size=5000,
-            load_from_cache_file=False
-            #remove_columns=old_eval_column_names,
-            )
-        # with open('/cluster/scratch/wangjun/temp2/dataset.txt', 'w') as f:
-        #         f.write(str(dataset))
-        
-        #--junling modify--
-        import pickle
-
-        # Load mask_contents from pickle file
-        with open("/cluster/scratch/wangjun/temp2/mask_contents.pkl", "rb") as f:
-            mask_contents = pickle.load(f)
-
-        # Function to update the 'response' field with mask_contents
-        def update_response(example, index, mask_contents):
-            example["response"] = mask_contents[index]
-            return example
-
-        # Apply the update_response function to each example in the dataset
-        dataset = dataset.map(
-            lambda example, idx: update_response(example, idx, mask_contents),
-            with_indices=True,
+        processed_features = dataset.map(
+        self.preprocess_features_and_maybe_normalize,
+        batched=True,
+        batch_size=5000,
+        load_from_cache_file=False
         )
-        #--junling modify--
-        
-        with open('/cluster/scratch/wangjun/temp2/dataset.txt', 'w') as f:
-            f.write(str(dataset))
-        with open('/cluster/scratch/wangjun/temp2/dataset_content.txt', 'w') as f:
-            for example in dataset:
+
+        new_eval_column_names = [col for col in processed_features.column_names if col != "mask_contents"]
+        with open('/cluster/scratch/wangjun/temp2/processed_features.txt', 'w') as f:
+            f.write(str(processed_features))
+        with open('/cluster/scratch/wangjun/temp2/processed_features_content.txt', 'w') as f:
+            for example in processed_features:
                 f.write(str(example) + '\n')
 
-        return dataset
+
+        # Create a new dataset with the updated 'response' values and the additional columns
+        updated_dataset = Dataset.from_dict({
+            key: processed_features[key] if key != "response" else processed_features["mask_contents"]
+            for key in new_eval_column_names
+        })
+        
+        with open('/cluster/scratch/wangjun/temp2/updated_dataset.txt', 'w') as f:
+            f.write(str(updated_dataset))
+        with open('/cluster/scratch/wangjun/temp2/updated_dataset_content.txt', 'w') as f:
+            for example in updated_dataset:
+                f.write(str(example) + '\n')
+        
+        
+        return updated_dataset
+        
+
+        # dataset = dataset.map(
+        #     self.preprocess_features_and_maybe_normalize,
+        #     batched=True,
+        #     batch_size=5000,
+        #     load_from_cache_file=False
+        #     #remove_columns=old_eval_column_names,
+        #     )
+        # # with open('/cluster/scratch/wangjun/temp2/dataset.txt', 'w') as f:
+        # #         f.write(str(dataset))
+        
+        # #--junling modify--
+        # import pickle
+
+        # # Load mask_contents from pickle file
+        # with open("/cluster/scratch/wangjun/temp2/mask_contents.pkl", "rb") as f:
+        #     mask_contents = pickle.load(f)
+
+        # # Function to update the 'response' field with mask_contents
+        # def update_response(example, index, mask_contents):
+        #     example["response"] = mask_contents[index]
+        #     return example
+
+        # # Apply the update_response function to each example in the dataset
+        # dataset = dataset.map(
+        #     lambda example, idx: update_response(example, idx, mask_contents),
+        #     with_indices=True,
+        # )
+        # #--junling modify--
+        
+        # with open('/cluster/scratch/wangjun/temp2/dataset.txt', 'w') as f:
+        #     f.write(str(dataset))
+        # with open('/cluster/scratch/wangjun/temp2/dataset_content.txt', 'w') as f:
+        #     for example in dataset:
+        #         f.write(str(example) + '\n')
+
+        # return dataset
 
     def get_train_dataset(self):
         return self._get_dataset(self.data_args.dataset_train_split)
