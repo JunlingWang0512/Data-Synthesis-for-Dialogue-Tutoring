@@ -6,8 +6,8 @@ import os
 import subprocess
 
 
-os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting4_27_random_mask2/tf_cache")
-os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting4_27_random_mask2/hf_cache")
+os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/feiclu/dialogue_inpainting4_29_random_mask/tf_cache")
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/feiclu/dialogue_inpainting4_29_random_mask/hf_cache")
 # os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE")
 # os.environ["HF_HOME"] = os.getenv("HF_HOME")
 import sys
@@ -122,7 +122,7 @@ def get_config_class(model_args):
 
 
 def get_tokenizer_name(config, model_args):
-    # with open('/cluster/scratch/wangjun/temp2/model_args.txt', 'w') as f:
+    # with open('/cluster/scratch/feiclu/temp3/model_args.txt', 'w') as f:
     #     f.write(str(model_args))
     if "density_ratio" in model_args.method:
         return config.language_model_tokenizer_name_or_path
@@ -297,9 +297,9 @@ def main(run_mode: RunMode):
                     cls=NumpyEncoder
                 )
         #--junling modify--
-        for sample in test_dataset:
-            with open('/cluster/scratch/wangjun/temp2/4_27_sample.txt', 'w') as f:
-                f.write(str(sample))
+        # for sample in test_dataset:
+        #     with open('/cluster/scratch/feiclu/temp3/4_27_sample.txt', 'w') as f:
+        #         f.write(str(sample))
         #--junling modify--
         refs = [[sample["response"] for sample in test_dataset]] #debug junling.bleu.
 

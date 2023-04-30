@@ -90,7 +90,7 @@ import numpy as np
 #             knowledge = knowledge[:self.model_args.knowledge_max_tokens]
 #         return knowledge
 def preprocess(features):#junling modify
-#     with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
+#     with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
 #             f.write(str(features))
     sequences, labels = [], []
     filename = 'test_generation_output4.txt'
@@ -172,9 +172,9 @@ def preprocess(features):#junling modify
 
         # sequences.append(full_sequence)
         # labels.append(response)
-    # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/sequences_preprocess_output.txt', 'w') as f:
+    # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/sequences_preprocess_output.txt', 'w') as f:
     #     f.write(str(features))
-    # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
+    # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
     #     f.write(str(features))
     return "xxx"
 with open('features_preprocess_input.txt', 'r') as f:

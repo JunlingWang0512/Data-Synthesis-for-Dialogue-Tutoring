@@ -44,7 +44,7 @@ class WizardOfWikipedia(DocumentGroundedDataset, datasets.GeneratorBasedBuilder)
     #     # ipdb.set_trace()
 
     #     # print('sample', sample)
-    #     with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/temp/sample.txt', 'w') as f:
+    #     with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/temp/sample.txt', 'w') as f:
     #         f.write(str(sample))
 
     #     for turn in sample["dialog"]:
@@ -107,7 +107,7 @@ class WizardOfWikipedia(DocumentGroundedDataset, datasets.GeneratorBasedBuilder)
             #create a directory to store the samples
             
           
-            with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/samples.txt', 'w') as f:
+            with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/samples.txt', 'w') as f:
                 f.write(str(samples))
 
             return samples

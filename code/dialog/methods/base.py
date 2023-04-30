@@ -109,10 +109,10 @@ class Method(abc.ABC):
         load_from_cache_file=False
         )
 
-        new_eval_column_names = [col for col in processed_features.column_names if col != "mask_contents"]
-        with open('/cluster/scratch/wangjun/temp2/processed_features.txt', 'w') as f:
+        new_eval_column_names = [col for col in processed_features.column_names if col != "mask_contents" and col != "knowledge"]
+        with open('/cluster/scratch/feiclu/temp3/processed_features.txt', 'w') as f:
             f.write(str(processed_features))
-        with open('/cluster/scratch/wangjun/temp2/processed_features_content.txt', 'w') as f:
+        with open('/cluster/scratch/feiclu/temp3/processed_features_content.txt', 'w') as f:
             for example in processed_features:
                 f.write(str(example) + '\n')
 
@@ -123,9 +123,9 @@ class Method(abc.ABC):
             for key in new_eval_column_names
         })
         
-        with open('/cluster/scratch/wangjun/temp2/updated_dataset.txt', 'w') as f:
+        with open('/cluster/scratch/feiclu/temp3/updated_dataset.txt', 'w') as f:
             f.write(str(updated_dataset))
-        with open('/cluster/scratch/wangjun/temp2/updated_dataset_content.txt', 'w') as f:
+        with open('/cluster/scratch/feiclu/temp3/updated_dataset_content.txt', 'w') as f:
             for example in updated_dataset:
                 f.write(str(example) + '\n')
         
@@ -140,14 +140,14 @@ class Method(abc.ABC):
         #     load_from_cache_file=False
         #     #remove_columns=old_eval_column_names,
         #     )
-        # # with open('/cluster/scratch/wangjun/temp2/dataset.txt', 'w') as f:
+        # # with open('/cluster/scratch/feiclu/temp3/dataset.txt', 'w') as f:
         # #         f.write(str(dataset))
         
         # #--junling modify--
         # import pickle
 
         # # Load mask_contents from pickle file
-        # with open("/cluster/scratch/wangjun/temp2/mask_contents.pkl", "rb") as f:
+        # with open("/cluster/scratch/feiclu/temp3/mask_contents.pkl", "rb") as f:
         #     mask_contents = pickle.load(f)
 
         # # Function to update the 'response' field with mask_contents
@@ -162,9 +162,9 @@ class Method(abc.ABC):
         # )
         # #--junling modify--
         
-        # with open('/cluster/scratch/wangjun/temp2/dataset.txt', 'w') as f:
+        # with open('/cluster/scratch/feiclu/temp3/dataset.txt', 'w') as f:
         #     f.write(str(dataset))
-        # with open('/cluster/scratch/wangjun/temp2/dataset_content.txt', 'w') as f:
+        # with open('/cluster/scratch/feiclu/temp3/dataset_content.txt', 'w') as f:
         #     for example in dataset:
         #         f.write(str(example) + '\n')
 
