@@ -40,7 +40,7 @@ class DocumentGroundedPreprocessor(Preprocessor):
         return knowledge
 
     # def preprocess(self, features):#original code
-    #     # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
     #     #         f.write(str(features))
     #     sequences, labels = [], []
     #     for context, dialog_act, knowledge, response in zip(
@@ -69,13 +69,13 @@ class DocumentGroundedPreprocessor(Preprocessor):
 
     #         sequences.append(full_sequence)
     #         labels.append(response)
-    #     # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/sequences_preprocess_output.txt', 'w') as f:
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/sequences_preprocess_output.txt', 'w') as f:
     #     #     f.write(str(features))
-    #     # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
     #     #     f.write(str(features))
     #     return sequences, labels
     # def preprocess(self, features):#no knowledge
-    #     # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features_preprocess_input.txt', 'w') as f:
     #     #         f.write(str(features))
     #     sequences, labels = [], []
     #     for context, dialog_act, response in zip(
@@ -104,9 +104,9 @@ class DocumentGroundedPreprocessor(Preprocessor):
 
     #         sequences.append(full_sequence)
     #         labels.append(response)
-    #     # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/sequences_preprocess_output.txt', 'w') as f:
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/sequences_preprocess_output.txt', 'w') as f:
     #     #     f.write(str(features))
-    #     # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
+    #     # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/labels_preprocess_output.txt', 'w') as f:
     #     #     f.write(str(features))
     #     return sequences, labels
     def preprocess(self, features): #dialogue inpainting
@@ -114,7 +114,7 @@ class DocumentGroundedPreprocessor(Preprocessor):
         mask_contents = []
         responses = []
         index_to_mask = 0 #initialize
-        with open('/cluster/scratch/feiclu/temp3/features_len.txt', 'w') as f:
+        with open('/cluster/scratch/wangjun/temp3/features_len.txt', 'w') as f:
                 f.write(str(len(features)))
         
         for context, dialog_act, response in zip(
@@ -167,9 +167,9 @@ class DocumentGroundedPreprocessor(Preprocessor):
             labels.append(label)
         import pickle
         # Save mask_contents to a pickle file
-        with open("/cluster/scratch/feiclu/temp3/mask_contents.pkl", "wb") as f:
+        with open("/cluster/scratch/wangjun/temp3/mask_contents.pkl", "wb") as f:
             pickle.dump(mask_contents, f)
-        with open("/cluster/scratch/feiclu/temp3/responses.pkl", "wb") as f:
+        with open("/cluster/scratch/wangjun/temp3/responses.pkl", "wb") as f:
             pickle.dump(responses, f)
         # return sequences, labels
         return sequences, labels, mask_contents #junling modify

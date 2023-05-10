@@ -80,7 +80,7 @@ class DocumentGroundedGenerationMethod(Seq2SeqMethod):
 
     def preprocess_features(self, features): #junling modify
         #write features into a txt file
-        # with open('/cluster/scratch/feiclu/dialogue_inpainting4_14/features.txt', 'w') as f:
+        # with open('/cluster/scratch/wangjun/dialogue_inpainting4_14/features.txt', 'w') as f:
         #         f.write(str(features))
         processor = DocumentGroundedPreprocessor(self.config, self.data_args, self.model_args, self.tokenizer)
         input_ids, labels, mask_contents = processor.preprocess(features) #junling modify
@@ -92,8 +92,8 @@ class DocumentGroundedGenerationMethod(Seq2SeqMethod):
 
         if self.data_args.is_training:
             return_dict["labels"] = labels
-        with open('/cluster/scratch/feiclu/temp3/return_dict.txt', 'w') as f:
-                f.write(str(return_dict))
+        # with open('/cluster/scratch/wangjun/temp3/return_dict.txt', 'w') as f:
+        #         f.write(str(return_dict))
         return return_dict
 
     def get_special_tokens(self):
@@ -190,14 +190,15 @@ class ResponseGenerationMethod(Seq2SeqMethod):
     name = "response_generation"
 
     def preprocess_features(self, features):
-        for i in range(len(features["knowledge"])):
+        for i in range(len(features["knowledge"])): #make knowledge empty
             features["knowledge"][i] = []
 
         processor = DocumentGroundedPreprocessor(self.config, self.data_args, self.model_args, self.tokenizer)
-        input_ids, labels = processor.preprocess(features)
+        input_ids, labels,mask_contents = processor.preprocess(features)
 
         return_dict = {
             "input_ids": input_ids,
+            "mask_contents":mask_contents,
         }
 
         if self.data_args.is_training:

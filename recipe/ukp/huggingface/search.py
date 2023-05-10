@@ -32,7 +32,7 @@ class HuggingfaceSearchJob(Job):
       *,  # args below are keyword only
       time_rqmt=4,
       mem_rqmt=4,
-      cpu_rqmt=2,
+      cpu_rqmt=1,
       gpu_rqmt=1,
       python_exe=None,
       sbatch_args=None,

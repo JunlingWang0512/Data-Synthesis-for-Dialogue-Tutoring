@@ -134,67 +134,68 @@ class CalculateMetricsJob(Job):
                 i, j = i + max(len(f), 1), 1
                 F.append(f)
             return F, pred
+        
+        #_____junling modify_____ some of them originally be comment
+        # tokenizer = AutoTokenizer.from_pretrained("McGill-NLP/roberta-large-faithcritic", return_tensors="pt")
+        # model = AutoModelForSequenceClassification.from_pretrained("McGill-NLP/roberta-large-faithcritic").to("cuda:0")
 
-        tokenizer = AutoTokenizer.from_pretrained("McGill-NLP/roberta-large-faithcritic", return_tensors="pt")
-        model = AutoModelForSequenceClassification.from_pretrained("McGill-NLP/roberta-large-faithcritic").to("cuda:0")
+        # with open(self.model_output_file, "r") as f:
+        #     predictions = json.load(f)
 
-        with open(self.model_output_file, "r") as f:
-            predictions = json.load(f)
+        # dataset = load_dataset(self.dataset, "response_generation", split=self.split)
 
-        dataset = load_dataset(self.dataset, "response_generation", split=self.split)
+        # critic_scores, densities, coverages, lcss = [], [], [], []
 
-        critic_scores, densities, coverages, lcss = [], [], [], []
+        # # for prediction, ground_truth in tqdm(zip(predictions, dataset)):
+        # #     F, pred = calculate_F(prediction, ground_truth["knowledge"][0]["text"], regexp_tokenizer)
+        # #     coverages.append(coverage(F, pred))
+        # #     densities.append(density(F, pred))
+        # #     lcss.append(lcs(F, pred))
 
-        for prediction, ground_truth in tqdm(zip(predictions, dataset)):
-            F, pred = calculate_F(prediction, ground_truth["knowledge"][0]["text"], regexp_tokenizer)
-            coverages.append(coverage(F, pred))
-            densities.append(density(F, pred))
-            lcss.append(lcs(F, pred))
+        # #     with torch.no_grad():
+        # #         input_ = tokenizer(ground_truth["knowledge"][0]["text"], prediction, return_tensors="pt", truncation=True, max_length=256).to(model.device)
+        # #         critic_scores.append(torch.argmax(model(**input_).logits).cpu().detach().numpy())
 
-            with torch.no_grad():
-                input_ = tokenizer(ground_truth["knowledge"][0]["text"], prediction, return_tensors="pt", truncation=True, max_length=256).to(model.device)
-                critic_scores.append(torch.argmax(model(**input_).logits).cpu().detach().numpy())
+        # # all_knowledge = [sample["knowledge"][0]["text"] for sample in dataset]
+        # all_refs = [sample["response"] for sample in dataset]
+        # # bert_scores_knowledge = bert_score.score(predictions, all_knowledge, model_type=self.bert_score_model_name_or_path, batch_size=4)
+        # bert_scores_gen = bert_score.score(predictions, all_refs, model_type=self.bert_score_model_name_or_path)
+        # refs_sbleu = [[sample["response"] for sample in dataset]]
 
-        all_knowledge = [sample["knowledge"][0]["text"] for sample in dataset]
-        all_refs = [sample["response"] for sample in dataset]
-        bert_scores_knowledge = bert_score.score(predictions, all_knowledge, model_type=self.bert_score_model_name_or_path, batch_size=4)
-        bert_scores_gen = bert_score.score(predictions, all_refs, model_type=self.bert_score_model_name_or_path)
-        refs_sbleu = [[sample["response"] for sample in dataset]]
+        # bleu = BLEU()
+        # bleu_score = bleu.corpus_score(predictions, refs_sbleu)
+        # critic_score = round(np.mean(critic_scores), 4)
+        # # P_k, R_k, f1_k = (tensor.mean().item() for tensor in bert_scores_knowledge)
+        # P_g, R_g, f1_g = (tensor.mean().item() for tensor in bert_scores_gen)
 
-        bleu = BLEU()
-        bleu_score = bleu.corpus_score(predictions, refs_sbleu)
-        critic_score = round(np.mean(critic_scores), 4)
-        P_k, R_k, f1_k = (tensor.mean().item() for tensor in bert_scores_knowledge)
-        P_g, R_g, f1_g = (tensor.mean().item() for tensor in bert_scores_gen)
-
-        scores = {
-            "sacrebleu": bleu_score.score,
-            "critic_score": critic_score,
-            "BertScore": {
-                "generation": {
-                    "P": P_g,
-                    "R": R_g,
-                    "F-1": f1_g  
-                },
-                "knowledge": {
-                    "P": P_k,
-                    "R": R_k,
-                    "F-1": f1_k
-                },
-                "model": self.bert_score_model_name_or_path,
-            },
-            "knowledge_f1": round(np.mean([self.f1_score(pred, ref, nlp) for pred, ref in tqdm(zip(predictions, all_knowledge))]), 4),
-            "coverage": round(np.mean(coverages), 4),
-            "density": round(np.mean(densities), 4),
-            "lcs": round(np.mean(lcss), 4),
-        }
+        # scores = {
+        #     "sacrebleu": bleu_score.score,
+        #     "critic_score": critic_score,
+        #     "BertScore": {
+        #         "generation": {
+        #             "P": P_g,
+        #             "R": R_g,
+        #             "F-1": f1_g  
+        #         },
+        #         # "knowledge": {
+        #         #     "P": P_k,
+        #         #     "R": R_k,
+        #         #     "F-1": f1_k
+        #         # },
+        #         "model": self.bert_score_model_name_or_path,
+        #     },
+        #     # "knowledge_f1": round(np.mean([self.f1_score(pred, ref, nlp) for pred, ref in tqdm(zip(predictions, all_knowledge))]), 4),
+        #     "coverage": round(np.mean(coverages), 4),
+        #     "density": round(np.mean(densities), 4),
+        #     "lcs": round(np.mean(lcss), 4),
+        # }
 
 
-        with open(self.out_results_file, "w") as f:
-            json.dump(
-                scores,
-                f
-            )
+        # with open(self.out_results_file, "w") as f:
+        #     json.dump(
+        #         scores,
+        #         f
+        #     )
 
     def tasks(self):
         yield Task("run", resume="run", rqmt=self.rqmt, mini_task=False)
@@ -290,49 +291,49 @@ class CalculateMetricsForMultiDocJob(CalculateMetricsJob):
 
         critic_scores, densities, coverages, lcss = [], [], [], []
 
-        for prediction, ground_truth in tqdm(zip(predictions, dataset)):
-            local_lcss, local_coverages, local_critic_scores, local_densities = [], [], [], []
-            for i in range(len(ground_truth["knowledge"])):
-                F, pred = calculate_F(prediction, ground_truth["knowledge"][i]["text"], regexp_tokenizer)
-                local_coverages.append(coverage(F, pred))
-                local_densities.append(density(F, pred))
-                local_lcss.append(lcs(F, pred))
-                coverages.append(np.max(local_coverages))
-                densities.append(np.min(local_densities))
-                lcss.append(np.min(local_lcss))
+        # for prediction, ground_truth in tqdm(zip(predictions, dataset)):
+        #     local_lcss, local_coverages, local_critic_scores, local_densities = [], [], [], []
+        #     for i in range(len(ground_truth["knowledge"])):
+        #         F, pred = calculate_F(prediction, ground_truth["knowledge"][i]["text"], regexp_tokenizer)
+        #         local_coverages.append(coverage(F, pred))
+        #         local_densities.append(density(F, pred))
+        #         local_lcss.append(lcs(F, pred))
+        #         coverages.append(np.max(local_coverages))
+        #         densities.append(np.min(local_densities))
+        #         lcss.append(np.min(local_lcss))
 
-                with torch.no_grad():
-                    input_ = tokenizer(ground_truth["knowledge"][i]["text"], prediction, return_tensors="pt", truncation=True, max_length=256).to(model.device)
-                    local_critic_scores.append(torch.argmax(model(**input_).logits).cpu().detach().numpy())
-                    critic_scores.append(np.min(local_critic_scores))
+        #         with torch.no_grad():
+        #             input_ = tokenizer(ground_truth["knowledge"][i]["text"], prediction, return_tensors="pt", truncation=True, max_length=256).to(model.device)
+        #             local_critic_scores.append(torch.argmax(model(**input_).logits).cpu().detach().numpy())
+        #             critic_scores.append(np.min(local_critic_scores))
 
-        all_knowledge = []
+        # all_knowledge = []
         all_preds = []
-        for sample, pred in zip(dataset, predictions):
-            for snippet in sample["knowledge"]:
-                all_preds.append(pred)
-                all_knowledge.append(snippet["text"])
+        # for sample, pred in zip(dataset, predictions):
+        #     for snippet in sample["knowledge"]:
+        #         all_preds.append(pred)
+        #         all_knowledge.append(snippet["text"])
 
         all_refs = [sample["response"] for sample in dataset]
-        bert_scores_knowledge = bert_score.score(all_preds, all_knowledge, model_type=self.bert_score_model_name_or_path)
+        # bert_scores_knowledge = bert_score.score(all_preds, all_knowledge, model_type=self.bert_score_model_name_or_path)
         bert_scores_gen = bert_score.score(predictions, all_refs, model_type=self.bert_score_model_name_or_path)
         refs_sbleu = [[sample["response"] for sample in dataset]]
 
         bleu = BLEU()
         score = bleu.corpus_score(predictions, refs_sbleu)
         critic_score = round(np.mean(critic_scores), 4)
-        P_k, R_k, f1_k = (tensor.mean().item() for tensor in bert_scores_knowledge)
+        # P_k, R_k, f1_k = (tensor.mean().item() for tensor in bert_scores_knowledge)
         P_g, R_g, f1_g = (tensor.mean().item() for tensor in bert_scores_gen)
 
-        all_knowledge = []
+        # all_knowledge = []
         all_preds = []
         for sample, pred in zip(dataset, predictions):
-            new_knowledge = []
+            # new_knowledge = []
             new_preds = []
-            for snippet in sample["knowledge"]:
-                new_preds.append(pred)
-                new_knowledge.append(snippet["text"])
-            all_knowledge.append(new_knowledge)
+            # for snippet in sample["knowledge"]:
+            #     new_preds.append(pred)
+            #     new_knowledge.append(snippet["text"])
+            # all_knowledge.append(new_knowledge)
             all_preds.append(new_preds)
                 
         scores = {
@@ -344,15 +345,15 @@ class CalculateMetricsForMultiDocJob(CalculateMetricsJob):
                     "R": R_g,
                     "F-1": f1_g  
                 },
-                "knowledge": {
-                    "P": P_k,
-                    "R": R_k,
-                    "F-1": f1_k
-                },
+                # "knowledge": {
+                #     "P": P_k,
+                #     "R": R_k,
+                #     "F-1": f1_k
+                # },
                 "model": self.bert_score_model_name_or_path,
             },
-            "knowledge_f1": round(np.mean([np.max([self.f1_score(pred, ref, nlp) for pred, ref in zip(preds, refs)])
-                                          for preds, refs in tqdm(zip(all_preds, all_knowledge))]), 4),
+            # "knowledge_f1": round(np.mean([np.max([self.f1_score(pred, ref, nlp) for pred, ref in zip(preds, refs)])
+            #                               for preds, refs in tqdm(zip(all_preds, all_knowledge))]), 4),
             "coverage": round(np.mean(coverages), 4),
             "density": round(np.mean(densities), 4),
             "lcs": round(np.mean(lcss), 4),

@@ -633,11 +633,11 @@ async def task_arithmetic():
         "per_device_train_batch_size": 4,
         "gradient_accumulation_steps": 8,
         "per_device_eval_batch_size": 8,
-        "gpu_mem_train": 12,
-        "gpu_mem_test": 10,
+        "gpu_mem_train": 11,
+        "gpu_mem_test": 11,
         "num_epochs": 10,
         "num_expert_epochs": 5,
-        "gpu_mem_fisher": 12
+        "gpu_mem_fisher": 11
     }
 # "train[:20%]",
     run_models(**config)
