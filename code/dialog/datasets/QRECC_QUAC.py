@@ -61,7 +61,7 @@ class QRECC(DocumentGroundedDataset, datasets.GeneratorBasedBuilder):
     def _split_generators(self, dl_manager):  # junling modify done 
         data_path = self._URL
         splits = ["train", "val", "test"]
-        file_names = ["train_qrecc_quac_filtered.json", "validation_qrecc_quac_filtered.json", "test_qrecc_quac.json"]
+        file_names = ["train_qrecc_quac_filtered_full.json", "validation_qrecc_quac_filtered_full.json", "test_qrecc_quac_filtered_full.json"]
         data_files = {   
             split: os.path.join(data_path, file_name) for split, file_name in zip(splits, file_names)
         }

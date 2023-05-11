@@ -1,7 +1,7 @@
 import getpass
 import sys
 
-WORK_DIR = '/cluster/scratch/wangjun/dialogue_inpainting5_6_both/work'
+WORK_DIR = '/cluster/scratch/wangjun/dialogue_inpainting5_10_both/work'
 IMPORT_PATHS = ['config', 'recipe', 'recipe/']
 
 def TODO():
@@ -26,16 +26,16 @@ def engine():
 # HF_HOME = TODO()
 # PYTHON_EXE = TODO() # Add path to your python executable
 # TRANSFORMERS_CACHE = TODO()
-CACHE_DIR = "/cluster/scratch/wangjun/dialogue_inpainting5_6_both/cache"
+CACHE_DIR = "/cluster/scratch/wangjun/dialogue_inpainting5_10_both/cache"
 # CACHE_DIR = TODO()
 CODE_ROOT = "/cluster/home/wangjun/dialog_inpainting/dialog_inpainting_implementation/code"
 # CODE_ROOT = TODO()
-HF_HOME = "/cluster/scratch/wangjun/dialogue_inpainting5_6_both/hf_cache"
+HF_HOME = "/cluster/scratch/wangjun/dialogue_inpainting5_10_both/hf_cache"
 
 # HF_HOME = TODO()
 PYTHON_EXE = "/cluster/project/sachan/wangjun/anaconda3/envs/master/bin/python"
 # PYTHON_EXE = TODO() # Add path to your python executable
-TRANSFORMERS_CACHE = "/cluster/scratch/wangjun/dialogue_inpainting5_6_both/tf_cache"
+TRANSFORMERS_CACHE = "/cluster/scratch/wangjun/dialogue_inpainting5_10_both/tf_cache"
 IMPORT_PATHS = ['config', 'recipe/']
 SIS_COMMAND = [PYTHON_EXE, sys.argv[0]]
 MAX_PARALLEL = 20

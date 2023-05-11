@@ -12,8 +12,8 @@ from datasets import Dataset, load_dataset, concatenate_datasets
 import time
 import random
 
-os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting5_6_both/tf_cache")
-os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting5_6_both/hf_cache")
+os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting5_10_both/tf_cache")
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting5_10_both/hf_cache")
 # os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE")
 # os.environ["HF_HOME"] = os.getenv("HF_HOME")
 import sys
@@ -157,7 +157,7 @@ class RunMode(Enum):
 #__function for dialog inpainting__
 tokenizer = AutoTokenizer.from_pretrained(  #can be merged into main function if needed later
         'google/flan-t5-base',
-        cache_dir='/cluster/scratch/wangjun/dialogue_inpainting5_6_both/cache',
+        cache_dir='/cluster/scratch/wangjun/dialogue_inpainting5_10_both/cache',
         use_fast=True,
         revision="main",
         use_auth_token=None,
@@ -399,7 +399,7 @@ def main(run_mode: RunMode):
     elif run_mode == RunMode.PREDICT:
         # Input data
         
-        with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/math/algebra_and_trigonometry.json') as f:
+        with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/business/business_ethics.json') as f:
             dataset = json.load(f)
 
         count_section = 0

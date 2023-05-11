@@ -134,7 +134,8 @@ class HuggingfaceTrainingJob(Job):
     self.distributed = distributed
 
     if gpu_rqmt > 1:
-      sbatch_args = "-P multigpu"
+      # sbatch_args = "-P multigpu" #junling modify
+      sbatch_args = []
     elif sbatch_args is None:
       sbatch_args = []
 

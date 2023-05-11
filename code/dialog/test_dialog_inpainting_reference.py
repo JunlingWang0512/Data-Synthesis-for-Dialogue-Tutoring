@@ -9,7 +9,7 @@ import random
 #__tokenizer这部分要删掉————
 tokenizer = AutoTokenizer.from_pretrained(
         'google/flan-t5-base',
-        cache_dir='/cluster/scratch/wangjun/dialogue_inpainting5_6_both/cache',
+        cache_dir='/cluster/scratch/wangjun/dialogue_inpainting5_10_both/cache',
         use_fast=True,
         revision="main",
         use_auth_token=None,

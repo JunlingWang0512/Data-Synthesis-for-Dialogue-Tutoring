@@ -478,7 +478,7 @@ async def task_arithmetic():
         "num_epochs": 10,
         "num_expert_epochs": 5,
         "gpu_mem_fisher": 10,
-        "baseline_model_name_or_path":'/cluster/scratch/wangjun/dialogue_inpainting5_6_both/work/ukp/huggingface/training/HuggingfaceTrainingJob.5NJi2znCfmgw/output/models/epoch-best'
+        "baseline_model_name_or_path":'/cluster/scratch/wangjun/dialogue_inpainting5_10_both/work/ukp/huggingface/training/HuggingfaceTrainingJob.quASXtjypzEF/output/models/epoch-best'
     }
 # "train[:20%]",
     run_models(**config)
