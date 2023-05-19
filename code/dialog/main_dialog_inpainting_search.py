@@ -5,16 +5,15 @@ from uuid import uuid4
 import logging
 import os
 import subprocess
-import peft
-from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training, TaskType
+
 from typing import List, Tuple
 import itertools
 from datasets import Dataset, load_dataset, concatenate_datasets
 import time
 import random
 
-os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/tf_cache")
-os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/hf_cache")
+os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting5_6_both/tf_cache")
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting5_6_both/hf_cache")
 # os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE")
 # os.environ["HF_HOME"] = os.getenv("HF_HOME")
 import sys
@@ -52,8 +51,7 @@ from transformers.trainer_utils import is_main_process, PredictionOutput, get_la
 
 from dialog.methods.dialogue_inpainting_method import DialogueInpaintingMethod #junling modify
 from dialog.arguments import *
-# from dialog.methods.base import Method, TaskType #junlingmodify
-from dialog.methods.base import Method
+from dialog.methods.base import Method, TaskType
 from dialog.methods.generation import ResponseGenerationMethod, DocumentGroundedGenerationMethod, \
     Seq2SeqMethod, FisherApproximationForDocumentGroundedGenerationMethod, DocumentGroundedGenerationWithCTRLMethod, \
     FisherApproximationForDocumentGroundedGenerationWithCTRLMethod, DocumentGroundedGenerationWithDensityRatioMethod, \
@@ -159,7 +157,7 @@ class RunMode(Enum):
 #__function for dialog inpainting__
 tokenizer = AutoTokenizer.from_pretrained(  #can be merged into main function if needed later
         'google/flan-t5-base',
-        cache_dir='/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/cache',
+        cache_dir='/cluster/scratch/wangjun/dialogue_inpainting5_6_both/cache',
         use_fast=True,
         revision="main",
         use_auth_token=None,
@@ -319,7 +317,6 @@ def main(run_mode: RunMode):
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=model_args.use_auth_token,
-        load_in_8bit=True, device_map="auto" #junling modify
     )
     if model_args.num_labels is not None:
         config.num_labels = model_args.num_labels
@@ -355,23 +352,6 @@ def main(run_mode: RunMode):
     model.config.no_repeat_ngram_size = model_args.generation_no_repeat_ngram_size
     model.config.uid_regularization = model_args.generation_uid_regularization
     model.config.num_return_sequences = model_args.num_return_sequences
-    #--junling modify--
-    
-    # Define LoRA Config
-    lora_config = LoraConfig(
-    r=16,
-    lora_alpha=32,
-    target_modules=["q", "v"],
-    lora_dropout=0.05,
-    bias="none",
-    task_type=peft.TaskType.SEQ_2_SEQ_LM
-    )
-    # prepare int-8 model for training
-    model = prepare_model_for_int8_training(model)
-    # add LoRA adaptor
-    model = get_peft_model(model, lora_config)
-    #--junling modify--
-
 
     if run_mode == RunMode.TRAIN:
         extra_trainer_args = {
@@ -394,14 +374,8 @@ def main(run_mode: RunMode):
     )
     trainer.add_callback(GPUMemoryCallback())
 
-    #junling modify
-    # model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
 
     if run_mode == RunMode.TRAIN:
-        
-        # with open('/cluster/scratch/wangjun/peft_model_save/training_args-output_dir.txt', 'w') as f:
-        #         f.write(str(training_args.output_dir))
-        
         # Check for existing checkpoint to continue the training
         last_checkpoint = get_last_checkpoint(training_args.output_dir)
         resume_from_checkpoint = last_checkpoint if last_checkpoint is not None else None
@@ -411,7 +385,6 @@ def main(run_mode: RunMode):
 
         output_train_file = os.path.join(
             training_args.output_dir, "train_results.txt")
-        
         if trainer.is_world_process_zero():
             with open(output_train_file, "w") as writer:
                 logger.info("***** Train results *****")
@@ -422,142 +395,227 @@ def main(run_mode: RunMode):
             # Need to save the state, since Trainer.save_model saves only the tokenizer with the model
             trainer.state.save_to_json(os.path.join(
                 training_args.output_dir, "trainer_state.json"))
-        #--junling modify, peft model save--
-        peft_model_id= str(training_args.output_dir).replace("checkpoints", "models/epoch-best")
-        trainer.model.save_pretrained(peft_model_id)
-        tokenizer.save_pretrained(peft_model_id)
-        
-        # backup_path = '/cluster/scratch/wangjun/peft_model_save'
-        # trainer.model.save_pretrained(backup_path)
-        # tokenizer.save_pretrained(backup_path)
-        #--junling modify, peft model save--
-        
+    
     elif run_mode == RunMode.PREDICT:
-        test_dataset = method_definition.get_test_dataset()
+        # Input data
+        
+        with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/math/algebra_and_trigonometry.json') as f:
+            dataset = json.load(f)
+
+        count_section = 0
+        for key in dataset:
+            
+            if key not in ('book_statistics','chapter_concepts','chapter_questions'):
+                count_section += 1
+                # if(count_section == 1 or count_section == 2):
+                #     continue
+                # if(count_section == 5):
+                #     break
+                # print(dataset[key]['content'])
+                section = dataset[key]['content']
+                count = 0
+                result = []
+                document_title = str(key)
+                for paragraph in section:
+                    
+                    # if len(paragraph) > 69:
+                        # divide paragraph into sentences, and then generate response for each sentence
+                    sentences = nltk.sent_tokenize(paragraph)
+                    if(len(sentences) == 1):
+                        document_title = str(sentences[0])
+                        
+                    elif(len(sentences) > 1):
+                        # print('document_title',document_title)
+                        # print('sentences',sentences)
+                        dialog = []  # Initialize an empty dialog
+                        author_num = []
+                        test_datasets = []
+
+                        # Generate dialog inpainting
+                        for idx, sentence in enumerate(sentences):
+                            if idx == 0:
+                                test_dataset = generate_partial_dialog([sentence], document_title)
+                            else:
+                                test_dataset = generate_partial_dialog(dialog + [sentence], document_title)
+                            
+                            results = trainer.predict(test_dataset)
+                            for example in test_dataset:
+                                test_datasets.append(example)
+                            results = method_definition.postprocess_predictions(results, test_dataset)
+
+                            results_to_keep = []
+                            for j in range(int(len(results) / model.config.num_return_sequences)):
+                                lower_bound = j * model.config.num_return_sequences
+                                upper_bound = j * model.config.num_return_sequences + model_args.num_sequences_to_keep
+                                results_to_keep.extend(results[lower_bound:upper_bound])
+                            results = results_to_keep
+
+                            generated_sentence = results[0]
+
+                            dialog.append(generated_sentence)  # Add the generated sentence as the first element
+                            dialog.append(sentence)  # Add the current input sentence
+                            author_num.append(0)
+                            author_num.append(1)
+                            
+                        # Save the targeted content
+                        output_data = {
+                            "title": document_title,
+                            "pid": str(uuid4()),
+                            "passage": " ".join(sentences),
+                            "sentences": sentences,
+                            "author_num": author_num,
+                            "utterances": dialog
+                        }
+                        if data_args.prediction_output_file is not None:
+                            with open(data_args.prediction_output_file, 'a') as f:
+                                json.dump(output_data, f, cls=NumpyEncoder)
         
         
-        results = trainer.predict(test_dataset)
-        # with open('/cluster/scratch/wangjun/peft_model_save/trainer_predict.txt', 'w') as f:
-        #         f.write(str(results))
         
-        scores = results.scores
-        results = method_definition.postprocess_predictions(
-            results,
-            test_dataset
-        )
-        results_to_keep = []
-        for idx in range(int(len(results) / model.config.num_return_sequences)):
-            lower_bound = idx * model.config.num_return_sequences
-            upper_bound = idx * model.config.num_return_sequences + model_args.num_sequences_to_keep
-            results_to_keep.extend(results[lower_bound:upper_bound])
-        results = results_to_keep
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        # sentences = [
+        #     "Lesmahagow F.C.",
+        #     "Lesmahagow Football Club is a Scottish football club, based in the town of Lesmahagow, South Lanarkshire.",
+        #     "They were formed in 1885 and play at Craighead Park.",
+        #     "Currently playing in the West of Scotland League Central District First Division.",
+        #     "they wear Red And White Hooped Shirts, White Shorts, Red Socks and away colours are Blue Shirt White Trim, Blue Shorts, Blue Socks white trim.",
+        #     "The club are sponsored by The Black Bull Inn, Lesmahagow."
+        # ]
 
-        if data_args.prediction_output_file is not None:
-            with open(data_args.prediction_output_file, 'wt') as f:
-                json.dump(
-                    dataclasses.asdict(results) if type(
-                        results) == PredictionOutput else results,
-                    f,
-                    cls=NumpyEncoder
-                )
+        # document_title = "Lesmahagow F.C."
+        # dialog = []  # Initialize an empty dialog
+        # author_num = []
+        # test_datasets = []
 
-        refs = [[sample["response"] for sample in test_dataset]] #debug junling.bleu.
+        # # Generate dialog inpainting
+        # for idx, sentence in enumerate(sentences):
+        #     if idx == 0:
+        #         test_dataset = generate_partial_dialog([sentence], document_title)
+        #     else:
+        #         test_dataset = generate_partial_dialog(dialog + [sentence], document_title)
+            
+        #     results = trainer.predict(test_dataset)
+        #     for example in test_dataset:
+        #         test_datasets.append(example)
+        #     results = method_definition.postprocess_predictions(results, test_dataset)
 
-        # other metrics can be calculated with further jobs
-        bleu = BLEU()
-        score = bleu.corpus_score(results, refs)
+        #     results_to_keep = []
+        #     for j in range(int(len(results) / model.config.num_return_sequences)):
+        #         lower_bound = j * model.config.num_return_sequences
+        #         upper_bound = j * model.config.num_return_sequences + model_args.num_sequences_to_keep
+        #         results_to_keep.extend(results[lower_bound:upper_bound])
+        #     results = results_to_keep
 
-        scores = {
-            "sacrebleu": score.score,
-            "sacrebleu_signature": str(bleu.get_signature()),
-        }
+        #     generated_sentence = results[0]
 
-        if data_args.metric_output_file is not None:
-            with open(data_args.metric_output_file, "wt") as f:
-                json.dump(
-                    scores,
-                    f
-                )
+        #     dialog.append(generated_sentence)  # Add the generated sentence as the first element
+        #     dialog.append(sentence)  # Add the current input sentence
+        #     author_num.append(0)
+        #     author_num.append(1)
+            
+        # # Save the targeted content
+        # output_data = {
+        #     "title": document_title,
+        #     "pid": str(uuid4()),
+        #     "passage": " ".join(sentences),
+        #     "sentences": sentences,
+        #     "author_num": author_num,
+        #     "utterances": dialog
+        # }
+        
+        
+        # # with open('/cluster/scratch/wangjun/temp4/main_test_datasets.txt', 'w') as f:
+        # #     f.write(str(test_datasets))
+        # if data_args.prediction_output_file is not None:
+        #     with open(data_args.prediction_output_file, 'wt') as f:
+        #         json.dump(output_data, f, cls=NumpyEncoder)
+
 
     # elif run_mode == RunMode.PREDICT:
-    #     # Input data
+    #     # test_dataset = method_definition.get_test_dataset()
+    #     #__junling modify__
+    #     sentences = [
+    #     "Lesmahagow F.C."
+    #     ]
         
-    #     with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/business/business_ethics.json') as f:
-    #         dataset = json.load(f)
+    #     document_title = "Lesmahagow F.C."
 
-    #     count_section = 0
-    #     for key in dataset:
-            
-    #         if key not in ('book_statistics','chapter_concepts','chapter_questions'):
-    #             count_section += 1
-    #             # if(count_section == 1 or count_section == 2):
-    #             #     continue
-    #             # if(count_section == 5):
-    #             #     break
-    #             # print(dataset[key]['content'])
-    #             section = dataset[key]['content']
-    #             count = 0
-    #             result = []
-    #             document_title = str(key)
-    #             for paragraph in section:
-                    
-    #                 # if len(paragraph) > 69:
-    #                     # divide paragraph into sentences, and then generate response for each sentence
-    #                 sentences = nltk.sent_tokenize(paragraph)
-    #                 if(len(sentences) == 1):
-    #                     document_title = str(sentences[0])
-                        
-    #                 elif(len(sentences) > 1):
-    #                     # print('document_title',document_title)
-    #                     # print('sentences',sentences)
-    #                     dialog = []  # Initialize an empty dialog
-    #                     author_num = []
-    #                     test_datasets = []
+    #     test_dataset = generate_partial_dialog(sentences, document_title)
+        
+    #     # with open('/cluster/scratch/wangjun/temp4/test_dataset_attribute.txt', 'w') as f:
+    #     #     f.write(str(test_dataset))
+    #     with open('/cluster/scratch/wangjun/temp4/test_dataset_dialog_inpainting.txt', 'w') as f:
+    #         for example in test_dataset:
+    #             f.write(str(example) + '\n')
+    #     # import pickle
+    #     # obj2 = "123"
+    #     # with open('/cluster/scratch/wangjun/temp4/test_dataset.pkl', 'wb') as f:  # Python 3: open(..., 'wb')
+    #     #     pickle.dump([test_dataset, obj2], f)
+    #     # print('updated_dataset',updated_dataset)
+    #     # for example in updated_dataset:
+    #     #     print(str(example))
+    #     #__junling modify__
 
-    #                     # Generate dialog inpainting
-    #                     for idx, sentence in enumerate(sentences):
-    #                         if idx == 0:
-    #                             test_dataset = generate_partial_dialog([sentence], document_title)
-    #                         else:
-    #                             test_dataset = generate_partial_dialog(dialog + [sentence], document_title)
-                            
-    #                         results = trainer.predict(test_dataset)
-    #                         for example in test_dataset:
-    #                             test_datasets.append(example)
-    #                         results = method_definition.postprocess_predictions(results, test_dataset)
+    #     results = trainer.predict(test_dataset)
+        
+    #     with open('/cluster/scratch/wangjun/temp4/results_trainer_predict.txt', 'w') as f:
+    #             f.write(str(results))
+    #     # scores = results.scores #junling modify
+    #     results = method_definition.postprocess_predictions(
+    #         results,
+    #         test_dataset
+    #     )
+    #     with open('/cluster/scratch/wangjun/temp4/results_postprocess_predictions.txt', 'w') as f:
+    #             f.write(str(results))
+    #     results_to_keep = []
+    #     for idx in range(int(len(results) / model.config.num_return_sequences)):
+    #         lower_bound = idx * model.config.num_return_sequences
+    #         upper_bound = idx * model.config.num_return_sequences + model_args.num_sequences_to_keep
+    #         results_to_keep.extend(results[lower_bound:upper_bound])
+    #     results = results_to_keep
+    #     with open('/cluster/scratch/wangjun/temp4/results_to_keep.txt', 'w') as f:
+    #             f.write(str(results))
+    #     if data_args.prediction_output_file is not None:
+    #         with open(data_args.prediction_output_file, 'wt') as f:
+    #             json.dump(
+    #                 dataclasses.asdict(results) if type(
+    #                     results) == PredictionOutput else results,
+    #                 f,
+    #                 cls=NumpyEncoder
+    #             )
+        #--junling modify--
+        # for sample in test_dataset:
+        #     with open('/cluster/scratch/wangjun/temp3/4_27_sample.txt', 'w') as f:
+        #         f.write(str(sample))
+        #--junling modify--
+        # refs = [[sample["response"] for sample in test_dataset]] #junling modify
 
-    #                         results_to_keep = []
-    #                         for j in range(int(len(results) / model.config.num_return_sequences)):
-    #                             lower_bound = j * model.config.num_return_sequences
-    #                             upper_bound = j * model.config.num_return_sequences + model_args.num_sequences_to_keep
-    #                             results_to_keep.extend(results[lower_bound:upper_bound])
-    #                         results = results_to_keep
+        # other metrics can be calculated with further jobs
+        
+        # bleu = BLEU()
+        # score = bleu.corpus_score(results, refs)
 
-    #                         generated_sentence = results[0]
+        # scores = {
+        #     "sacrebleu": score.score,
+        #     "sacrebleu_signature": str(bleu.get_signature()),
+        # }
 
-    #                         dialog.append(generated_sentence)  # Add the generated sentence as the first element
-    #                         dialog.append(sentence)  # Add the current input sentence
-    #                         author_num.append(0)
-    #                         author_num.append(1)
-                            
-    #                     # Save the targeted content
-    #                     output_data = {
-    #                         "title": document_title,
-    #                         "pid": str(uuid4()),
-    #                         "passage": " ".join(sentences),
-    #                         "sentences": sentences,
-    #                         "author_num": author_num,
-    #                         "utterances": dialog
-    #                     }
-    #                     if data_args.prediction_output_file is not None:
-    #                         with open(data_args.prediction_output_file, 'a') as f:
-    #                             json.dump(output_data, f, cls=NumpyEncoder)
-        
-        
-        
-        
-        
-        
-        
-        
-        
+        # if data_args.metric_output_file is not None:
+        #     with open(data_args.metric_output_file, "wt") as f:
+        #         json.dump(
+        #             scores,
+        #             f
+        #         )

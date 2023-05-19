@@ -87,7 +87,7 @@ class HuggingfaceTrainingJob(Job):
   """
   __sis_hash_exclude__ = {
     'keep_only_best': False,
-    'distributed': False,
+    'distributed': False, #junling modify
     'sbatch_args': None,
   }
 
@@ -108,7 +108,7 @@ class HuggingfaceTrainingJob(Job):
       sbatch_args=None,
       python_exe=None,
       keep_only_best=False,
-      distributed=False,
+      distributed=False, #junling modify
       **kwargs,
   ):
     """
@@ -268,7 +268,7 @@ class CreateNoisyChannelCheckpointJob(Job):
     time_rqmt=4,
     mem_rqmt=18,
     cpu_rqmt=1,
-    gpu_rqmt=1,
+    gpu_rqmt=1, #junling modify
   ):
     self.code_root = code_root
     self.dm_model_name_or_path = dm_model_name_or_path

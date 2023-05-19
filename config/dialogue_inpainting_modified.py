@@ -19,9 +19,9 @@ Path = tk.Path
 
 code_root = gs.CODE_ROOT
 
-def train_model(method, model_name_or_path, dataset, dataset_config_name, model_description, per_device_train_batch_size=4, gradient_accumulation_steps=8,
+def train_model(method, model_name_or_path, dataset, dataset_config_name, model_description, per_device_train_batch_size=1, gradient_accumulation_steps=8,
                 dataset_train_split="train", dataset_val_split="validation", num_epochs=10, time_rqmt=24, mem_rqmt=40, gpu_mem=40, learning_rate=6.25e-5,
-                per_device_eval_batch_size=8): #junling modify learning_rate = 6.25e-5 #original, per_device_train_batch_size=4，per_device_eval_batch_size=8
+                per_device_eval_batch_size=1): #junling modify learning_rate = 6.25e-5 #original, per_device_train_batch_size=4，per_device_eval_batch_size=8
                 # original gpu_mem=10, mem_rqmt=24
     config = {
         'model_name_or_path': model_name_or_path,
@@ -29,7 +29,7 @@ def train_model(method, model_name_or_path, dataset, dataset_config_name, model_
         'method': method,
         'learning_rate': learning_rate,
         'per_device_train_batch_size': per_device_train_batch_size,
-        # 'per_device_eval_batch_size': per_device_eval_batch_size,
+        'per_device_eval_batch_size': per_device_eval_batch_size,
         'gradient_accumulation_steps': gradient_accumulation_steps,
         'cache_dir': gs.CACHE_DIR,
     }
@@ -53,7 +53,7 @@ def train_model(method, model_name_or_path, dataset, dataset_config_name, model_
     tk.register_output(f'{dataset}_{dataset_config_name}_{model_description}', train_job.out_best_model)
     return train_job
 
-def evaluate_model(method, model_name_or_path, dataset, dataset_config_name, model_description, per_device_eval_batch_size=8,
+def evaluate_model(method, model_name_or_path, dataset, dataset_config_name, model_description, per_device_eval_batch_size=1,
                    dataset_test_split="test", time_rqmt=2, mem_rqmt=40, gpu_mem=40, calculate_q2=False, generation_beam_size=None):
                            #gpu_mem = 10 original mem_rqmt=30
     config = {
@@ -99,7 +99,7 @@ def evaluate_model(method, model_name_or_path, dataset, dataset_config_name, mod
         )
     tk.register_output(f'results/{dataset}/{dataset_config_name}_{method}_{model_description}.metrics.json', scoring_job.out_results_file)
 
-def calculate_fisher_information(method, model_name_or_path, dataset, dataset_config_name, model_description, per_device_eval_batch_size=8,
+def calculate_fisher_information(method, model_name_or_path, dataset, dataset_config_name, model_description, per_device_eval_batch_size=1,
                    dataset_test_split="validation", time_rqmt=2, mem_rqmt=40, gpu_mem=40):
           #gpu_mem = 10 mem_rqmt=24
     assert "fisher" in method
@@ -134,7 +134,7 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
                         test_dataset_config_name=None, model_description=None, anti_expert_model_name_or_path=None, expert_model_name_or_path=None,
                         expert_dataset_name=None, anti_expert_dataset_name=None, expert_dataset_config_name=None, anti_expert_dataset_config_name=None,
                         dataset_test_split="test", dataset_train_split="train", dataset_val_split="validation", anti_expert_fisher_path=None, baseline_fisher_path=None,
-                        per_device_eval_batch_size=8, per_device_train_batch_size=4, gradient_accumulation_steps=8, train_time_rqmt=24,
+                        per_device_eval_batch_size=1, per_device_train_batch_size=1, gradient_accumulation_steps=8, train_time_rqmt=24,
                         time_rqmt=2, mem_rqmt=40, gpu_mem_train=40, gpu_mem_test=40, gpu_mem_fisher=40, num_epochs=10, fisher_estimation_method="fisher_approx_document_grounded_generation",
                         calculate_fisher_norms=False, num_expert_epochs=5):  #mem_rqmt = 24
     # Train all models
@@ -457,7 +457,7 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
 async def task_arithmetic():
     config = {
         "method": "document_grounded_generation",
-        "model_name_or_path": "google/flan-t5-base", #google/flan-t5-base
+        "model_name_or_path": "google/flan-t5-xl",#"philschmid/flan-t5-xxl-sharded-fp16", #google/flan-t5-base
         "model_description": "flan_t5_dialogue_inpainting",
         "train_dataset": "QRECC_QUAC",
         "test_datasets": ["QRECC_QUAC"],
@@ -468,16 +468,17 @@ async def task_arithmetic():
         "expert_dataset_config_name": "cape_expert",
         "anti_expert_dataset_config_name": "hallucinated_response",
         "dataset_train_split": "train",
-        "dataset_val_split": "validation",
+        "dataset_val_split": "validation[:100]",
         "dataset_test_split": "test",
-        "per_device_train_batch_size": 4, #original 4
+        "per_device_train_batch_size": 1, #original 4
         "gradient_accumulation_steps": 8,
-        "per_device_eval_batch_size": 8, #original 8
-        "gpu_mem_train": 24,
+        "per_device_eval_batch_size": 1, #original 8
+        "gpu_mem_train": 24, #base train 24
         "gpu_mem_test": 24,
         "num_epochs": 10,
         "num_expert_epochs": 5,
-        "gpu_mem_fisher": 24
+        "gpu_mem_fisher": 24,
+        # "baseline_model_name_or_path":'/cluster/scratch/wangjun/peft_model_save'
     }
 # "train[:20%]",
     run_models(**config)

@@ -6,8 +6,8 @@ import os
 import subprocess
 
 
-os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting5_10_both/tf_cache")
-os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting5_10_both/hf_cache")
+os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE", "/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/tf_cache")
+os.environ["HF_HOME"] = os.getenv("HF_HOME", "/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/hf_cache")
 # os.environ["TRANSFORMERS_CACHE"] = os.getenv("TRANSFORMERS_CACHE")
 # os.environ["HF_HOME"] = os.getenv("HF_HOME")
 import sys
@@ -193,6 +193,7 @@ def main(run_mode: RunMode):
         cache_dir=model_args.cache_dir,
         revision=model_args.model_revision,
         use_auth_token=model_args.use_auth_token,
+        
     )
     if model_args.num_labels is not None:
         config.num_labels = model_args.num_labels

@@ -1,0 +1,2 @@
+/var/spool/slurm/slurmd/state/job16805424/slurm_script: line 2: syntax error near unexpected token `4h'
+/var/spool/slurm/slurmd/state/job16805424/slurm_script: line 2: `sleep(4h)'

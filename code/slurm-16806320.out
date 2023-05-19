@@ -1,0 +1,2 @@
+slurmstepd: error: *** JOB 16806320 ON eu-lo-s4-080 CANCELLED AT 2023-05-16T12:41:11 ***
+slurmstepd: error: Detected 1 oom_kill event in StepId=16806320.batch. Some of the step tasks have been OOM Killed.
