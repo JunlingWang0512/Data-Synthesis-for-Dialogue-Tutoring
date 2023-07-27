@@ -457,7 +457,7 @@ def run_models(method=None, model_name_or_path=None, train_dataset=None, train_d
 async def task_arithmetic():
     config = {
         "method": "document_grounded_generation",
-        "model_name_or_path": "google/flan-t5-xl",#"philschmid/flan-t5-xxl-sharded-fp16", #google/flan-t5-base
+        "model_name_or_path": "google/t5-v1_1-xl",#google/flan-t5-xl, "philschmid/flan-t5-xxl-sharded-fp16", #google/flan-t5-base,#google/t5-v1_1-base
         "model_description": "flan_t5_dialogue_inpainting",
         "train_dataset": "QRECC_QUAC",
         "test_datasets": ["QRECC_QUAC"],
@@ -470,10 +470,10 @@ async def task_arithmetic():
         "dataset_train_split": "train",
         "dataset_val_split": "validation[:100]",
         "dataset_test_split": "test",
-        "per_device_train_batch_size": 1, #original 4
+        "per_device_train_batch_size": 3, #original 4  base 用10可以，xl尝试用2 or 3 
         "gradient_accumulation_steps": 8,
-        "per_device_eval_batch_size": 1, #original 8
-        "gpu_mem_train": 24, #base train 24
+        "per_device_eval_batch_size": 3, #original 8
+        "gpu_mem_train": 24, #base 10, xl 24
         "gpu_mem_test": 24,
         "num_epochs": 10,
         "num_expert_epochs": 5,

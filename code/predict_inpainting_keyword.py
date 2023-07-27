@@ -1,7 +1,11 @@
+#predict_inpainting_keyword
+
 # from dialog.main import RunMode, main
 
 # if __name__ == "__main__":
 #     main(RunMode.PREDICT)
+import re
+from rake_nltk import Rake
 import torch
 from peft import PeftModel, PeftConfig
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
@@ -100,24 +104,23 @@ def postprocess_predictions(p, dataset):
         )
         return out
 
-def generate_partial_dialog(sentences: List[str], document_title: str) -> Tuple[List[dict], str]:
+def generate_partial_dialog(sentences: List[str], document_title: str, keywords: List[str]) -> Tuple[List[dict], str]:
     sequences, labels = [], []
     
     if len(sentences) % 2 == 0:
         raise ValueError("The input 'sentences' must have an odd number of elements.")
 
-    # introduction = f"Hello, I am an automated assistant and can answer questions about {document_title}"
-    # introduction = f"As a teacher, let's start learning about {document_title}."
-    # dialog = [{'dialog_act': '', 'text': introduction, 'user': 'system'}] # 'system' acts as teacher
+    # Create a string of the keywords for the introduction
+    keywords_str = ', '.join(keywords[:-1]) + ' and ' + keywords[-1] if len(keywords) > 1 else keywords[0]
 
-    # introduction = f"As your teacher, I'll be asking you many questions about this document. Let's start with this: what's the title of our study material?"
-    # title_answer = f"The title of our study material is {document_title}"
-    # dialog = [{'dialog_act': '', 'text': introduction, 'user': 'system'}, {'dialog_act': '', 'text': title_answer, 'user': 'user'}]
-
-
-    introduction = f"As your teacher, I'll be asking you very specific questions about the content in this document. For example, if the content is about the Pythagorean theorem, I might ask: 'What is the relationship among the three sides of a right-angled triangle according to the Pythagorean theorem?' Now, let's start: what's the title of our study material?"
+    introduction = f"As your teacher, I'll be asking you very specific questions about the content in this document, particularly related to {keywords_str}. Now, let's start: what's the title of our study material?"
     title_answer = f"The title of our study material is {document_title}"
     dialog = [{'dialog_act': '', 'text': introduction, 'user': 'system'}, {'dialog_act': '', 'text': title_answer, 'user': 'user'}]
+
+
+    # introduction = f"As your teacher, I'll be asking you very specific questions about the content in this document. For example, if the content is about the Pythagorean theorem, I might ask: 'What is the relationship among the three sides of a right-angled triangle according to the Pythagorean theorem?' Now, let's start: what's the title of our study material?"
+    # title_answer = f"The title of our study material is {document_title}"
+    # dialog = [{'dialog_act': '', 'text': introduction, 'user': 'system'}, {'dialog_act': '', 'text': title_answer, 'user': 'user'}]
 
 
     for i, text in enumerate(sentences[:-1]):
@@ -137,8 +140,8 @@ def generate_partial_dialog(sentences: List[str], document_title: str) -> Tuple[
     'dataset_id':['dialog_inpainting'],
     'dialog_act':[''],
     'knowledge':[[]],
-    'response': [''],
-    
+    'response': ['']
+    # 'keywords': [', '.join(keywords)] 
     }
     
     context = _process_dialog_context(dialog)
@@ -197,7 +200,9 @@ tfidf_scores = defaultdict(int)
 nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
 # /cluster/scratch/wangjun/local_data/book_dataset_v4/business/business_ethics.json
 # /cluster/scratch/wangjun/local_data/book_dataset_v4/math/algebra_and_trigonometry.json
-with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/business/business_ethics.json') as f:
+# /cluster/scratch/wangjun/local_data/book_dataset_v4/social_sciences/psychology_2e.json
+# /cluster/scratch/wangjun/local_data/book_dataset_v4/science/physics.json
+with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/science/physics.json') as f:
     dataset = json.load(f)
 
 # Prepare data for TF-IDF vectorizer
@@ -253,7 +258,18 @@ def is_informative(sentence, THRESHOLD):
         return False
     return True
 
-
+def extract_keywords(sentences, num_keywords):
+    r = Rake()  # Uses stopwords for English from NLTK, and all punctuation characters.
+    keywords = []
+    
+    for sentence in sentences:
+        # Remove numbers
+        sentence = re.sub(r'\b\d+\b', '', sentence)
+        r.extract_keywords_from_text(sentence)
+        extracted_keywords = r.get_ranked_phrases()[:num_keywords]  # To get keyword phrases ranked highest to lowest.
+        keywords.extend(extracted_keywords)
+    
+    return keywords
 # def is_informative(sentence):
 #     doc = nlp_spacy(sentence)
 #     # Exclude sentences that don't contain any domain-specific terms
@@ -304,13 +320,13 @@ for key in dataset:
                 dialog = []  # Initialize an empty dialog
                 author_num = []
                 # test_datasets = []
-
+                keywords = extract_keywords(sentences,2)
                 # Generate dialog inpainting
                 for idx, sentence in enumerate(sentences):
                     if idx == 0:
-                        test_dataset = generate_partial_dialog([sentence], document_title)
+                        test_dataset = generate_partial_dialog([sentence], document_title,keywords)
                     else:
-                        test_dataset = generate_partial_dialog(dialog + [sentence], document_title)
+                        test_dataset = generate_partial_dialog(dialog + [sentence], document_title, keywords)
                     
                     # print(test_dataset['input_ids'][0])
                     input_ids_tensor = torch.tensor(test_dataset['input_ids'][0])
@@ -340,7 +356,8 @@ for key in dataset:
                     "passage": " ".join(original_sentences),
                     "sentences": original_sentences,
                     "author_num": author_num,
-                    "utterances": dialog
+                    "utterances": dialog,
+                    "keywords": keywords
                 }
                 with open(prediction_output_file, 'a') as f:
                         json.dump(output_data, f, cls=NumpyEncoder)

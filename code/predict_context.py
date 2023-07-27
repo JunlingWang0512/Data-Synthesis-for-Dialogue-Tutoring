@@ -100,9 +100,9 @@ def postprocess_predictions(p, dataset):
         )
         return out
 
-def generate_partial_dialog(sentences: List[str], document_title: str) -> Tuple[List[dict], str]:
+def generate_partial_dialog(sentences: List[str], document_title: str, prior_dialog:List[str]) -> Tuple[List[dict], str]:
     sequences, labels = [], []
-    
+    sentences = prior_dialog + sentences
     if len(sentences) % 2 == 0:
         raise ValueError("The input 'sentences' must have an odd number of elements.")
 
@@ -181,28 +181,17 @@ def generate_partial_dialog(sentences: List[str], document_title: str) -> Tuple[
 from sklearn.feature_extraction.text import TfidfVectorizer
 from collections import defaultdict
 
-
-nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
-nlp_spacy = spacy.load("en_core_web_sm")
-
-# Define custom tokenizer for using lemma
-def custom_tokenizer(document):
-    doc = nlp_spacy(document)
-    return [token.lemma_.lower() for token in doc]
 # Initialize TF-IDF vectorizer
-tfidf_vectorizer = TfidfVectorizer(tokenizer=custom_tokenizer, stop_words='english', lowercase=True)
+tfidf_vectorizer = TfidfVectorizer(stop_words='english', lowercase=True)
 
 # This dictionary will hold all the TF-IDF scores
 tfidf_scores = defaultdict(int)
 nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
-# /cluster/scratch/wangjun/local_data/book_dataset_v4/business/business_ethics.json
-# /cluster/scratch/wangjun/local_data/book_dataset_v4/math/algebra_and_trigonometry.json
-with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/business/business_ethics.json') as f:
+with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/math/algebra_and_trigonometry.json') as f:
     dataset = json.load(f)
 
 # Prepare data for TF-IDF vectorizer
 text = []
-tfidf_scores = defaultdict(float)
 for key in dataset:
     if key not in ('book_statistics', 'chapter_concepts', 'chapter_questions'):
         section = dataset[key]['content']
@@ -214,14 +203,14 @@ for key in dataset:
 # Calculate TF-IDF scores
 tfidf_matrix = tfidf_vectorizer.fit_transform(text)
 feature_names = tfidf_vectorizer.get_feature_names_out()
-
 for sentence_vector in tfidf_matrix:
     for term_id, score in zip(sentence_vector.indices, sentence_vector.data):
         tfidf_scores[feature_names[term_id]] += score
 #tf-idf
 
 
-
+nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
+nlp_spacy = spacy.load("en_core_web_sm")
 stop_words = set(stopwords.words('english'))
 
 # MIN_LEN = 5   # minimum sentence length
@@ -286,6 +275,7 @@ for key in dataset:
         count = 0
         result = []
         document_title = str(key)
+        prior_dialog = [] #context modify
         for paragraph in section:
             # sentences = nltk.sent_tokenize(paragraph)
             # replace nltk sentence tokenization with deepsegment
@@ -294,8 +284,12 @@ for key in dataset:
             sentences = [sentence.text for sentence in doc.sentences]
 
             original_sentences = sentences.copy()
+
+            
+
             if(len(sentences) == 1):
                 document_title = str(sentences[0])
+                prior_dialog = [] #context modify
                 
             elif(len(sentences) > 1):
                 # Filter sentences before generating dialogs
@@ -308,9 +302,9 @@ for key in dataset:
                 # Generate dialog inpainting
                 for idx, sentence in enumerate(sentences):
                     if idx == 0:
-                        test_dataset = generate_partial_dialog([sentence], document_title)
+                        test_dataset = generate_partial_dialog([sentence], document_title,prior_dialog)
                     else:
-                        test_dataset = generate_partial_dialog(dialog + [sentence], document_title)
+                        test_dataset = generate_partial_dialog(dialog + [sentence], document_title,prior_dialog)
                     
                     # print(test_dataset['input_ids'][0])
                     input_ids_tensor = torch.tensor(test_dataset['input_ids'][0])
@@ -332,7 +326,8 @@ for key in dataset:
                     dialog.append(sentence)  # Add the current input sentence
                     author_num.append(0)
                     author_num.append(1)
-                            
+
+                prior_dialog = dialog #context modify 
                 # Save the targeted content
                 output_data = {
                     "title": document_title,

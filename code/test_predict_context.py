@@ -27,35 +27,35 @@ from nltk.corpus import stopwords
 # nltk.download('punkt')
 
 # Load peft config for pre-trained checkpoint etc.
-config_path = sys.argv[1]
+# config_path = sys.argv[1]
 
-with open(config_path, 'r') as f:
-    config = json.load(f)
+# with open(config_path, 'r') as f:
+#     config = json.load(f)
 
 # Access model_path
-peft_model_id = config['model_name_or_path']
-prediction_output_file = config['prediction_output_file']
+# peft_model_id = config['model_name_or_path']
+# prediction_output_file = config['prediction_output_file']
 # peft_model_id = "/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/work/ukp/huggingface/training/HuggingfaceTrainingJob.wrncuVcHOHOI/output/models/epoch-best"
-config = PeftConfig.from_pretrained(peft_model_id)
+# config = PeftConfig.from_pretrained(peft_model_id)
 
 # load base LLM model and tokenizer
-model = AutoModelForSeq2SeqLM.from_pretrained(config.base_model_name_or_path,  device_map='auto')
-tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path)
+# model = AutoModelForSeq2SeqLM.from_pretrained(config.base_model_name_or_path,  device_map='auto')
+# tokenizer = AutoTokenizer.from_pretrained(config.base_model_name_or_path)
 
 # Load the Lora model
-model = PeftModel.from_pretrained(model, peft_model_id, device_map='auto')
+# model = PeftModel.from_pretrained(model, peft_model_id, device_map='auto')
 #  load_in_8bit=True, device_map="auto" #junling modify
-model.eval()
+# model.eval()
 
 # print("Peft model loaded")
 
-# tokenizer = AutoTokenizer.from_pretrained(  #can be merged into main function if needed later
-#         'google/flan-t5-base',
-#         cache_dir='/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/cache',
-#         use_fast=True,
-#         revision="main",
-#         use_auth_token=None,
-#     )
+tokenizer = AutoTokenizer.from_pretrained(  #can be merged into main function if needed later
+        'google/flan-t5-base',
+        cache_dir='/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/cache',
+        use_fast=True,
+        revision="main",
+        use_auth_token=None,
+    )
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
     
@@ -100,9 +100,9 @@ def postprocess_predictions(p, dataset):
         )
         return out
 
-def generate_partial_dialog(sentences: List[str], document_title: str) -> Tuple[List[dict], str]:
+def generate_partial_dialog(sentences: List[str], document_title: str, prior_dialog:List[str]) -> Tuple[List[dict], str]:
     sequences, labels = [], []
-    
+    sentences = prior_dialog + sentences
     if len(sentences) % 2 == 0:
         raise ValueError("The input 'sentences' must have an odd number of elements.")
 
@@ -173,6 +173,9 @@ def generate_partial_dialog(sentences: List[str], document_title: str) -> Tuple[
     batched=False,
     load_from_cache_file=False
     )
+    # for example in updated_dataset:
+    #     print(example)
+    # print('new________')
     return updated_dataset
 
 #__function for dialog inpainting__
@@ -181,28 +184,17 @@ def generate_partial_dialog(sentences: List[str], document_title: str) -> Tuple[
 from sklearn.feature_extraction.text import TfidfVectorizer
 from collections import defaultdict
 
-
-nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
-nlp_spacy = spacy.load("en_core_web_sm")
-
-# Define custom tokenizer for using lemma
-def custom_tokenizer(document):
-    doc = nlp_spacy(document)
-    return [token.lemma_.lower() for token in doc]
 # Initialize TF-IDF vectorizer
-tfidf_vectorizer = TfidfVectorizer(tokenizer=custom_tokenizer, stop_words='english', lowercase=True)
+tfidf_vectorizer = TfidfVectorizer(stop_words='english', lowercase=True)
 
 # This dictionary will hold all the TF-IDF scores
 tfidf_scores = defaultdict(int)
 nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
-# /cluster/scratch/wangjun/local_data/book_dataset_v4/business/business_ethics.json
-# /cluster/scratch/wangjun/local_data/book_dataset_v4/math/algebra_and_trigonometry.json
-with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/business/business_ethics.json') as f:
+with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/math/algebra_and_trigonometry.json') as f:
     dataset = json.load(f)
 
 # Prepare data for TF-IDF vectorizer
 text = []
-tfidf_scores = defaultdict(float)
 for key in dataset:
     if key not in ('book_statistics', 'chapter_concepts', 'chapter_questions'):
         section = dataset[key]['content']
@@ -214,14 +206,14 @@ for key in dataset:
 # Calculate TF-IDF scores
 tfidf_matrix = tfidf_vectorizer.fit_transform(text)
 feature_names = tfidf_vectorizer.get_feature_names_out()
-
 for sentence_vector in tfidf_matrix:
     for term_id, score in zip(sentence_vector.indices, sentence_vector.data):
         tfidf_scores[feature_names[term_id]] += score
 #tf-idf
 
 
-
+nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
+nlp_spacy = spacy.load("en_core_web_sm")
 stop_words = set(stopwords.words('english'))
 
 # MIN_LEN = 5   # minimum sentence length
@@ -286,6 +278,7 @@ for key in dataset:
         count = 0
         result = []
         document_title = str(key)
+        prior_dialog = [] #context modify
         for paragraph in section:
             # sentences = nltk.sent_tokenize(paragraph)
             # replace nltk sentence tokenization with deepsegment
@@ -294,8 +287,12 @@ for key in dataset:
             sentences = [sentence.text for sentence in doc.sentences]
 
             original_sentences = sentences.copy()
+
+            
+
             if(len(sentences) == 1):
                 document_title = str(sentences[0])
+                prior_dialog = [] #context modify
                 
             elif(len(sentences) > 1):
                 # Filter sentences before generating dialogs
@@ -308,16 +305,24 @@ for key in dataset:
                 # Generate dialog inpainting
                 for idx, sentence in enumerate(sentences):
                     if idx == 0:
-                        test_dataset = generate_partial_dialog([sentence], document_title)
+                        # print('prior_dialog',prior_dialog)
+                        test_dataset = generate_partial_dialog([sentence], document_title,prior_dialog)
+                        # if(prior_dialog != []):
+                        #     for example in test_dataset:
+                        #         print(example)
+                            # print("test_dataset",test_dataset)
                     else:
-                        test_dataset = generate_partial_dialog(dialog + [sentence], document_title)
+                        test_dataset = generate_partial_dialog(dialog + [sentence], document_title,prior_dialog)
                     
+                    print('prior_dialog',prior_dialog)
+                    if(prior_dialog != []):
+                        for example in test_dataset:
+                            print(example)
                     # print(test_dataset['input_ids'][0])
-                    input_ids_tensor = torch.tensor(test_dataset['input_ids'][0])
+                    # input_ids_tensor = torch.tensor(test_dataset['input_ids'][0])
                     # add repetition penalty
-                    results = model.generate(input_ids=input_ids_tensor.unsqueeze(0).cuda(),do_sample=True, top_p=0.9, repetition_penalty=1.5)
-                    prediction = tokenizer.decode(results[0].detach().cpu().numpy(), skip_special_tokens=True) #peft prediction
-                    
+                    results = 'generate_results'
+                    prediction = 'generate_results_prediction'
                     # process the prediction results
                     prediction = prediction.replace('<user>', '')
                     prediction = prediction.replace('user>', '')
@@ -332,7 +337,8 @@ for key in dataset:
                     dialog.append(sentence)  # Add the current input sentence
                     author_num.append(0)
                     author_num.append(1)
-                            
+
+                prior_dialog = dialog #context modify 
                 # Save the targeted content
                 output_data = {
                     "title": document_title,
@@ -342,5 +348,7 @@ for key in dataset:
                     "author_num": author_num,
                     "utterances": dialog
                 }
-                with open(prediction_output_file, 'a') as f:
-                        json.dump(output_data, f, cls=NumpyEncoder)
+
+                # print(output_data)
+                # with open(prediction_output_file, 'a') as f:
+                #         json.dump(output_data, f, cls=NumpyEncoder)

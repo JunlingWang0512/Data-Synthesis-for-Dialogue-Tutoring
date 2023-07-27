@@ -1,0 +1,2 @@
+slurmstepd: error: *** JOB 19407237 ON eu-lo-dgx1-003 CANCELLED AT 2023-06-26T15:10:55 ***
+slurmstepd: error: Detected 2 oom_kill events in StepId=19407237.batch. Some of the step tasks have been OOM Killed.
