@@ -6,7 +6,7 @@ import re
 import csv
 
 
-openai.api_key = "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"
+openai.api_key = ""
 
 
 

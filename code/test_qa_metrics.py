@@ -1,4 +1,4 @@
-from transformers import pipeline, AutoTokenizer, AutoModelForQuestionAnswering,AutoModelForSequenceClassification
+from transformers import pipeline, AutoModelForSeq2SeqLM,AutoTokenizer, AutoModelForQuestionAnswering,AutoModelForSequenceClassification
 import difflib
 import nltk
 from ast import literal_eval
@@ -426,6 +426,82 @@ def Q_A_eval6_span_binary(question: str, given_answer: str, sentences: list):
         return 0,predicted_answer,similarity_score,repetition
 
 
+
+def Q_A_eval7_generative_model(question: str, given_answer: str, sentences: list):
+    # Initialize the FLAN T5 base model
+    flan_model = AutoModelForSeq2SeqLM.from_pretrained('google/flan-t5-base')
+    flan_tokenizer = AutoTokenizer.from_pretrained('google/flan-t5-base')
+
+    repetition = sentences_match(question,given_answer)
+    if not question:
+        print('Empty question was given as input.')
+        return 0,"",0,repetition
+
+    # Join all sentences into a single context
+    context = ' '.join(sentences)
+
+    # Prepare the inputs for the Flan T5 base model
+    instruction = "Given a passage of text and a question, generate an answer in natural language or say \"I don't know\" if the question is unanswerable."
+    prompt = f"{instruction}\n\nPassage: {context}\nQuestion: {question}"
+    inputs = flan_tokenizer.encode(prompt, return_tensors='pt')
+
+    # Generate an output sequence (answer) with the Flan T5 base model
+    outputs = flan_model.generate(inputs, max_length=200, temperature=0.7)
+    predicted_answer = flan_tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    print('predicted_answer',predicted_answer)
+
+    if not predicted_answer.strip():  #if cannot predict any answer, return 0 #or output['score'] < some_threshold:
+        return 0,predicted_answer,0
+
+    # Check the token-level similarity
+    similarity_score = sentences_match(given_answer, predicted_answer)
+
+    return similarity_score,predicted_answer,similarity_score,repetition
+
+
+def Q_A_eval8_question_score(question: str, given_answer: str, sentences: list):
+    # Initialize the QA model
+    repetition = sentences_match(question,given_answer)
+    if not question:
+        print('Empty question was given as input.')
+        return 0,"",0,repetition
+
+    # Join all sentences into a single context
+    context = ' '.join(sentences)
+
+    # Use the QA model to predict the answer from the context
+    output = qa_model(question=question, context=context)
+    print('qa_output',output)
+    # Store the predicted answer
+    predicted_answer = output['answer']
+
+    if not predicted_answer.strip():  #if cannot predict any answer, return 0 #or output['score'] < some_threshold:
+        return 0,predicted_answer,0
+    # Check the token-level similarity
+    similarity_score = sentences_match(given_answer, predicted_answer)
+    if similarity_score > 0.8:
+        return 1,predicted_answer,similarity_score,repetition
+
+    question_prob = output['score']
+    # # Prepare the inputs for the NLI model
+    # premise = given_answer
+    # hypothesis = predicted_answer
+
+    # # Encode the inputs
+    # inputs = nli_tokenizer.encode_plus(premise, hypothesis, return_tensors='pt')
+
+    # # Get the model's predictions
+    # outputs = nli_model(**inputs)[0]
+
+    # # Get the probabilities by applying the softmax function
+    # probs = torch.nn.functional.softmax(outputs, dim=-1)
+
+    # # Compute probability of entailment and non-entailment
+    # entailment_prob = probs[0, 2].item()
+    # non_entailment_prob = probs[0, 0].item() + probs[0, 1].item()
+
+    return question_prob,predicted_answer,similarity_score,repetition
 # example usage
 # question = "What is the reference angle for the first quadrant?"
 # given_answer = "An angle in the first quadrant is its own reference angle."
@@ -452,7 +528,7 @@ def preprocess_context(context_str):
 # Load your xlsx file into a pandas DataFrame
 # /cluster/scratch/wangjun/local_data/human_eval/key+post_human_eval_dataset_7_25.xlsx
 # /cluster/scratch/wangjun/local_data/human_eval/GPT3.5-human_eval.xlsx
-df = pd.read_excel('/cluster/scratch/wangjun/local_data/human_eval/key+post_human_eval_dataset_7_25.xlsx')
+df = pd.read_excel('/cluster/scratch/wangjun/local_data/human_eval/key+post_human_eval_8_14_100.xlsx')
 
 # Preprocess the 'context' column
 df['context'] = df['context'].apply(preprocess_context)
@@ -461,15 +537,15 @@ df['context'] = df['context'].apply(preprocess_context)
 df['context'] = df['context'].apply(literal_eval)
 
 # Apply your function to each row and store the results in the new columns 'Q_A_eval3' and 'predicted_answer'
-df[['Q_A_eval3', 'predicted_answer','similarity_score','repetition']] = df.apply(lambda row: pd.Series(Q_A_eval6_span_binary(row['question'], row['answer'], row['context'])), axis=1)
+df[['QFactScore', 'predicted_answer','similarity_score','repetition']] = df.apply(lambda row: pd.Series(Q_A_eval5_entailment_score(row['question'], row['answer'], row['context'])), axis=1)
 
 # Save the updated dataframe to a new xlsx file
-average_score1 = df['Q_A_eval3'].mean()
+average_score1 = df['QFactScore'].mean()
 print('key+post average_qa:',average_score1)
-df.to_excel('7_27_qa_huamn_version6_key+post.xlsx', index=False)
+df.to_excel('qfactscore_key+post_human_eval_8_14_100.xlsx', index=False)
 ##################################################################
 # /cluster/scratch/wangjun/local_data/human_eval/GPT3.5-human_eval.xlsx
-df = pd.read_excel('/cluster/scratch/wangjun/local_data/human_eval/GPT3.5-human_eval.xlsx')
+df = pd.read_excel('/cluster/scratch/wangjun/local_data/human_eval/GPT3.5-human_eval_8_14_100.xlsx')
 # Preprocess the 'context' column
 df['context'] = df['context'].apply(preprocess_context)
 
@@ -477,33 +553,14 @@ df['context'] = df['context'].apply(preprocess_context)
 df['context'] = df['context'].apply(literal_eval)
 
 # Apply your function to each row and store the results in the new columns 'Q_A_eval3' and 'predicted_answer'
-df[['Q_A_eval3', 'predicted_answer','similarity_score','repetition']] = df.apply(lambda row: pd.Series(Q_A_eval6_span_binary(row['question'], row['answer'], row['context'])), axis=1)
+df[['QFactScore', 'predicted_answer','similarity_score','repetition']] = df.apply(lambda row: pd.Series(Q_A_eval5_entailment_score(row['question'], row['answer'], row['context'])), axis=1)
 
 # Save the updated dataframe to a new xlsx file
-average_score2 = df['Q_A_eval3'].mean()
-print('key+post average_qa:',average_score1)
-print('gpt-3.5 average_qa:',average_score2)
+average_score2 = df['QFactScore'].mean()
+print('key+post average_QFactScore:',average_score1)
+print('gpt-3.5 average_QFactScore:',average_score2)
 
 
-df.to_excel('7_27_qa_huamn_version6_gpt3.5.xlsx', index=False)
+df.to_excel('qfactscore_GPT3.5-human_eval_8_14_100.xlsx', index=False)
 print('done')
-# 0.4,0.1
-# average_qa: 0.6 key
-# average_qa: 0.6375 gpt
-# 调参，让值最后趋于0.7，再测correlation
 
-# 0.4,0.05
-# gpt average_qa: 0.6625
-# key average_qa: 0.6375
-
-# 0.4,0.01
-# key+post average_qa: 0.65
-# gpt:0.6625
-
-# #0.3,0.01
-# key+post average_qa: 0.6875
-# gpt-3.5 average_qa: 0.7125
-
-#0.35,0.01
-# key+post average_qa: 0.6625
-# gpt-3.5 average_qa: 0.6875

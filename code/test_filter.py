@@ -1,127 +1,72 @@
-import torch
-from peft import PeftModel, PeftConfig
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from datasets import load_dataset
-from random import randrange
-from utils import NumpyEncoder
-import json
-import itertools
-from datasets import Dataset, load_dataset, concatenate_datasets
-import time
-import random
-from typing import List, Tuple
-# import nltk
-from uuid import uuid4
-import sys
-import stanza
-import spacy
-import nltk
-nltk.download('stopwords')
-from nltk.corpus import stopwords
-
-from sklearn.feature_extraction.text import TfidfVectorizer
+import math
 from collections import defaultdict
+from typing import List, Tuple
+from sklearn.decomposition import TruncatedSVD
+import numpy as np
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import networkx as nx
+import json
 
-# Initialize TF-IDF vectorizer
-tfidf_vectorizer = TfidfVectorizer(stop_words='english', lowercase=True)
+def word_frequencies(sentences: List[str]) -> defaultdict:
+    """Compute the frequency of each word in the passage."""
+    frequencies = defaultdict(int)
+    
+    for sentence in sentences:
+        for word in sentence.split():
+            word = word.lower().strip(".,!?()")
+            frequencies[word] += 1
+            
+    return frequencies
 
-# This dictionary will hold all the TF-IDF scores
-tfidf_scores = defaultdict(int)
-nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
-with open('/cluster/scratch/wangjun/local_data/book_dataset_v4/math/algebra_and_trigonometry.json') as f:
-    dataset = json.load(f)
+def sentence_entropy(sentence: str, frequencies: defaultdict, total_words: int) -> float:
+    """Compute the entropy of a sentence based on word frequencies."""
+    entropy = 0.0
+    for word in sentence.split():
+        word = word.lower().strip(".,!?()")
+        p_w = frequencies[word] / total_words
+        entropy -= p_w * math.log(p_w, 2)
+        
+    return entropy / len(sentence.split())  # Normalize by sentence length
 
-# Prepare data for TF-IDF vectorizer
-text = []
-for key in dataset:
-    if key not in ('book_statistics', 'chapter_concepts', 'chapter_questions'):
-        section = dataset[key]['content']
-        for paragraph in section:
-            doc = nlp_stanza(paragraph)
-            sentences = [sentence.text for sentence in doc.sentences]
-            text.extend(sentences)
+def rank_sentences(sentences: List[str]) -> List[Tuple[str, float]]:
+    """Rank sentences based on their entropy."""
+    frequencies = word_frequencies(sentences)
+    total_words = sum(frequencies.values())
+    
+    scores = []
+    for sentence in sentences:
+        scores.append((sentence_entropy(sentence, frequencies, total_words)))
+        
+    return scores
 
-# Calculate TF-IDF scores
-tfidf_matrix = tfidf_vectorizer.fit_transform(text)
-feature_names = tfidf_vectorizer.get_feature_names_out()
-for sentence_vector in tfidf_matrix:
-    for term_id, score in zip(sentence_vector.indices, sentence_vector.data):
-        tfidf_scores[feature_names[term_id]] += score
+# Latent Semantic Analysis (LSA) is a technique in natural language processing and information retrieval that reduces the dimensionality of term-document matrices using singular value decomposition (SVD). It can be used for various purposes, including topic modeling and document similarity calculations
+def lsa_central_score(sentences):
+    # Compute the TF-IDF matrix for the sentences
+    vectorizer = TfidfVectorizer().fit_transform(sentences)
+    
+    # Apply Singular Value Decomposition (SVD)
+    svd = TruncatedSVD(n_components=1, random_state=42)
+    lsa_embeddings = svd.fit_transform(vectorizer)
+    
+    # Score sentences based on the magnitude of the vectors in the reduced space
+    scores = {i: np.sum(lsa_embeddings[i]**2) for i in range(len(sentences))}
+    
+    return scores
+# Sample usage:
+passage = [
+    "To formalize our work, we will begin by drawing angles on an x-y coordinate plane.",
+    "Angles can occur in any position on the coordinate plane, but for the purpose of comparison, the convention is to illustrate them in the same position whenever possible.",
+    "An angle is in standard position if its vertex is located at the origin, and its initial side extends along the positive x-axis.",
+    "See Figure 5."
+  ]
 
+scores = rank_sentences(passage)
+print(scores)
 
+print(lsa_central_score(passage))
 
-
-nlp_stanza = stanza.Pipeline(lang='en', processors='tokenize')
-nlp_spacy = spacy.load("en_core_web_sm")
-stop_words = set(stopwords.words('english'))
-STOPWORDS_THRESHOLD = 0.5  # sentences with more stop words than this threshold will be removed
-
-# def is_informative(sentence):
-#     doc = nlp_spacy(sentence)
-#     if not doc.ents:
-#         return False  # if no named entities, not informative
-#     num_stopwords = sum([token.is_stop for token in doc])
-#     if num_stopwords / len(doc) > STOPWORDS_THRESHOLD:
-#         return False  # if too many stop words, not informative
-#     return True
-# def is_informative(sentence):
-#     doc = nlp_spacy(sentence)
-#     num_stopwords = sum([token.is_stop for token in doc])
-#     if num_stopwords / len(doc) > STOPWORDS_THRESHOLD:
-#         return False  # if too many stop words, not informative
-#     return True
-
-# def is_informative(sentence):
-#     doc = nlp_spacy(sentence)
-#     # Exclude sentences that don't contain any domain-specific terms
-#     # if not any(term in sentence for term in DOMAIN_SPECIFIC_TERMS):
-#     #     return False
-#     # Exclude sentences that are questions
-#     if sentence.endswith("?"):
-#         return False
-#     num_stopwords = sum([token.is_stop for token in doc])
-#     # Exclude sentences that contain too many common, non-domain-specific words
-#     if num_stopwords / len(doc) > STOPWORDS_THRESHOLD:
-#         return False
-#     return True
-
-def is_informative(sentence, THRESHOLD):
-    doc = nlp_spacy(sentence)
-    if not doc.ents and all(tfidf_scores.get(token.lemma_.lower(), 0) < THRESHOLD for token in doc):
-        print('tf_idf')
-        return False
-    num_stopwords = sum([token.is_stop for token in doc])
-    if num_stopwords / len(doc) > STOPWORDS_THRESHOLD:
-        print('stop_word',num_stopwords / len(doc))
-        return False
-    return True
-
-# s = 'An airline pilot maneuvers a plane toward a narrow runway'
-print('newsentence')
-s = 'These functions are the reciprocals of the first three functions.'
-print(is_informative(s,7))
-doc = nlp_spacy(s)
-# for token in doc:
-#     print(token,tfidf_scores.get(token.lemma_.lower(), 0))
-# print(is_informative(s, 0.1))
-
-print('newsentence')
-s = 'These functions are the reciprocals of the first three functions.'
-doc = nlp_spacy(s)
-for token in doc:
-    print(token,tfidf_scores.get(token.lemma_.lower(), 0))
-
-# print('newsentence')
-# s = 'We can graph $$\\(y = \\cot\\; x\\)$$ by observing the graph of the tangent function because these two functions are reciprocals of one another.'
-# doc = nlp_spacy(s)
-# for token in doc:
-#     print(token,tfidf_scores.get(token.lemma_.lower(), 0))
-
-# print('newsentence')
-# s = 'Where the graph of the tangent function decreases, the graph of the cotangent function increases.'
-# doc = nlp_spacy(s)
-# for token in doc:
-#     print(token,tfidf_scores.get(token.lemma_.lower(), 0))
-
-# 5-9
-# 用7
+# entropy:
+# [0.1123468730360788, 0.14959808656775336, 0.1340491342664976, 0.08852933995330681]
+# lsa:
+# {0: 0.1836564160349811, 1: 0.6486275172839653, 2: 0.5279318950707919, 3: 1.5217794504504082e-30}

@@ -172,8 +172,7 @@ class HuggingfaceTrainingJob(Job):
       'num_train_epochs': self.num_epochs,
       'logging_strategy': 'steps',
       'logging_steps': 128,
-      'save_strategy': 'steps', #junling modify
-      'save_steps':2000,
+      'save_strategy': 'epoch',
       'overwrite_output_dir': True,
     }
     assert fixed_config.keys().isdisjoint(self.config.keys())

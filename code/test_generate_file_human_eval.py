@@ -25,7 +25,7 @@ def search_json(json_file, context, target_utterance):
     return None
 
 def main():
-    df = pd.read_excel('/cluster/scratch/wangjun/local_data/human_eval/human_eval_dataset_7_25.xlsx')
+    df = pd.read_excel('/cluster/scratch/wangjun/local_data/human_eval/GPT3.5-human_eval_rest.xlsx')
     new_rows = []
 
     for _, row in df.iterrows():
@@ -36,7 +36,7 @@ def main():
         # print("tuple_",tuple_)
         # tuple2 = ast.literal_eval(tuple_)
 
-        json_file = f'/cluster/scratch/wangjun/GPT_results/GPT_3.5/{category}_search_output.json'
+        json_file = f'/cluster/scratch/wangjun/keyword+post_flan-t5-xl_result/{category}_search_output_post.json'
         new_tuple = search_json(json_file, context, answer)
         
         if new_tuple is not None:
@@ -66,7 +66,7 @@ def main():
 
 
     new_df = pd.DataFrame(new_rows, columns=["context","tuple","category","human_relevance","human_factual_consistency","strategy","question","answer"])
-    new_df.to_excel('new_eval_file.xlsx', index=False)
+    new_df.to_excel('keyword+post-human_eval_rest.xlsx', index=False)
 
 if __name__ == "__main__":
     main()

@@ -106,15 +106,19 @@ def postprocess_predictions(p, dataset):
 
 def generate_partial_dialog(sentences: List[str], document_title: str, keywords: List[str]) -> Tuple[List[dict], str]:
     sequences, labels = [], []
-    
+    teacher_or_student_ask = 0 #1:teacher ask questions  0:student ask questions
     if len(sentences) % 2 == 0:
         raise ValueError("The input 'sentences' must have an odd number of elements.")
 
     # Create a string of the keywords for the introduction
     keywords_str = ', '.join(keywords[:-1]) + ' and ' + keywords[-1] if len(keywords) > 1 else keywords[0]
-
-    introduction = f"As your teacher, I'll be asking you very specific questions about the content in this document, particularly related to {keywords_str}. Now, let's start: what's the title of our study material?"
-    title_answer = f"The title of our study material is {document_title}"
+    if teacher_or_student_ask == 1:
+        introduction = f"As your teacher, I'll be asking you very specific questions about the content in this document, particularly related to {keywords_str}. Now, let's start: what's the title of our study material?"
+        title_answer = f"The title of our study material is {document_title}"
+    else:
+        introduction = f"As your student, I have some questions about the content in this document, particularly related to {keywords_str}. May I begin by asking: what's the title of our study material?"
+        title_answer = f"The title of our study material is {document_title}."  #Do you have any other questions about it?
+        
     dialog = [{'dialog_act': '', 'text': introduction, 'user': 'system'}, {'dialog_act': '', 'text': title_answer, 'user': 'user'}]
 
 

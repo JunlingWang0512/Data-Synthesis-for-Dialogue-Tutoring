@@ -458,9 +458,9 @@ async def task_arithmetic():
     config = {
         "method": "document_grounded_generation",
         "model_name_or_path": "google/flan-t5-xl", #google/flan-t5-base, google/t5-v1_1-xl 这里应该不影响，可以改成xl
-        "model_description": "flan_t5_dialogue_inpainting",
-        "train_dataset": "QRECC_QUAC",
-        "test_datasets": ["QRECC_QUAC"],
+        "model_description": "flant5-xl_dialogue_inpainting",
+        "train_dataset": "QRECC_QUAC",  #TOQ_subset
+        "test_datasets": ["QRECC_QUAC"], #["TOQ_subset"]
         "train_dataset_config_name": "response_generation",
         "test_dataset_config_name": "response_generation",
         "expert_dataset_name": "QRECC_QUAC",
@@ -473,11 +473,11 @@ async def task_arithmetic():
         "per_device_train_batch_size": 3, #original 4
         "gradient_accumulation_steps": 8,
         "per_device_eval_batch_size": 3, #original 8
-        "gpu_mem_train": 24, #predict 用24即可
-        "gpu_mem_test": 24,#predict 用24即可
-        "num_epochs": 10,
-        "num_expert_epochs": 5,
-        "gpu_mem_fisher": 24,#predict 用24即可
+        "gpu_mem_train": 32, #predict 用24即可  rewriting 用24即可
+        "gpu_mem_test": 32,#predict 用24即可
+        "num_epochs": 1,
+        "num_expert_epochs": 1,
+        "gpu_mem_fisher": 32,#predict 用24即可
         "baseline_model_name_or_path":'/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/work/ukp/huggingface/training/HuggingfaceTrainingJob.Kgk4B74Yiygr/output/models/epoch-best'
     }
 # "train[:20%]",

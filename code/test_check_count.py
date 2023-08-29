@@ -71,7 +71,7 @@ def Q_A_eval(question: str, given_answer: str, sentences: list):
     return 0
 def calculate_toxicity(question):
     time.sleep(0.7) #1 没问题，尝试0.7 0.8.。。。
-    api_key = 'AIzaSyBnW_3WH0jFDUUEfGKwuTyDDans2KMEC8E'
+    api_key = 
     url = "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze"
     querystring = {"key": api_key}
     payload = {
@@ -153,7 +153,7 @@ def calculate_bigram_entropy(dialog):
 
     return bigram_entropy
 
-openai.api_key = "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"
+openai.api_key = "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"
 
 
 
@@ -706,7 +706,7 @@ def relevance_score(dialogue):
 # df.to_csv('7_10_NO_TOXICITY_keyword_social_search_metrics.csv')
 
 ################################################################
-file_path = '/cluster/scratch/wangjun/GPT_results/GPT_3.5/math_search_output.json'
+file_path = '/cluster/scratch/wangjun/keyword+post_flan-t5-xl_result/science_search_output_post.json'
 
 data = []
 with open(file_path, 'r') as f:

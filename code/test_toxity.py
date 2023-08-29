@@ -2,7 +2,7 @@ import requests
 import json
 
 def calculate_toxicity(question):
-    api_key = 'AIzaSyBnW_3WH0jFDUUEfGKwuTyDDans2KMEC8E'
+    api_key = ''
     """Calculates the toxicity of a question using the Perspective API.
 
     Args:
@@ -33,4 +33,4 @@ def calculate_toxicity(question):
     toxicity_score = response_dict["attributeScores"]["TOXICITY"]["summaryScore"]["value"]
     return toxicity_score
 
-print(calculate_toxicity('you are such an ugly person!','AIzaSyBnW_3WH0jFDUUEfGKwuTyDDans2KMEC8E'))  # 0-1
+print(calculate_toxicity('you are such an ugly person!',''))  # 0-1

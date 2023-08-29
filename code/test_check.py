@@ -86,7 +86,7 @@ def Q_A_eval(question: str, given_answer: str, sentences: list):
     return 0
 def calculate_toxicity(question):
     time.sleep(0.7) #1 没问题，尝试0.7 0.8.。。。
-    api_key = 'AIzaSyBnW_3WH0jFDUUEfGKwuTyDDans2KMEC8E'
+    api_key = 
     url = "https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze"
     querystring = {"key": api_key}
     payload = {
@@ -168,7 +168,7 @@ def calculate_bigram_entropy(dialog):
 
     return bigram_entropy
 
-openai.api_key = "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"
+openai.api_key = ""
 
 
 

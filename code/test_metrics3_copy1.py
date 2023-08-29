@@ -1,4 +1,4 @@
-# from transformers import AutoTokenizer, AutoModel, GPT2LMHeadModel, GPT2Tokenizer
+from transformers import AutoTokenizer, AutoModel, GPT2LMHeadModel, GPT2Tokenizer
 from scipy.spatial.distance import cosine
 import textstat
 import json
@@ -17,24 +17,79 @@ from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
 import requests
 import time
-# from transformers import pipeline
+from transformers import pipeline
 import difflib
-from transformers import pipeline, AutoTokenizer, AutoModelForQuestionAnswering,AutoModelForSequenceClassification,AutoModel, GPT2LMHeadModel, GPT2Tokenizer
-# import difflib
-# import nltk
+from transformers import pipeline, AutoModelForSeq2SeqLM,AutoTokenizer, AutoModelForQuestionAnswering,AutoModelForSequenceClassification
+import difflib
+import nltk
 from ast import literal_eval
 # from transformers import pipeline, AutoTokenizer, 
 import torch
-# import pandas as pd
+import pandas as pd
 
+import spacy
 
-# tokenizer_qa = AutoTokenizer.from_pretrained('deepset/deberta-v3-large-squad2')
 qa_model = pipeline('question-answering', model = 'deepset/deberta-v3-large-squad2')
 
-# nli_tokenizer = AutoTokenizer.from_pretrained('microsoft/deberta-large-mnli')
-# nli_model = AutoModelForSequenceClassification.from_pretrained('microsoft/deberta-large-mnli')
-nli_model = AutoModelForSequenceClassification.from_pretrained('roberta-large-mnli')
-nli_tokenizer = AutoTokenizer.from_pretrained('roberta-large-mnli')
+nli_tokenizer = AutoTokenizer.from_pretrained('microsoft/deberta-large-mnli')
+nli_model = AutoModelForSequenceClassification.from_pretrained('microsoft/deberta-large-mnli')
+
+
+def sentences_match(sentence1: str, sentence2: str) -> float:
+    # Tokenize both sentences
+    tokens1 = nltk.word_tokenize(sentence1)
+    tokens2 = nltk.word_tokenize(sentence2)
+
+    # Initialize a SequenceMatcher with the tokens
+    sequence_matcher = difflib.SequenceMatcher(None, tokens1, tokens2)
+
+    # Get the similarity ratio
+    similarity_score = sequence_matcher.ratio()
+
+    return similarity_score
+
+
+def Q_A_eval5_entailment_score(question: str, given_answer: str, sentences: list):
+    # Initialize the QA model
+    # repetition = sentences_match(question,given_answer)
+    if not question:
+        print('Empty question was given as input.')
+        return 0
+
+    # Join all sentences into a single context
+    context = ' '.join(sentences)
+
+    # Use the QA model to predict the answer from the context
+    output = qa_model(question=question, context=context)
+    print('qa_output',output)
+    # Store the predicted answer
+    predicted_answer = output['answer']
+
+    if not predicted_answer.strip():  #if cannot predict any answer, return 0 #or output['score'] < some_threshold:
+        return 0
+    # Check the token-level similarity
+    # similarity_score = sentences_match(given_answer, predicted_answer)
+    # if similarity_score > 0.8:
+    #     return 1
+
+    # Prepare the inputs for the NLI model
+    premise = given_answer
+    hypothesis = predicted_answer
+
+    # Encode the inputs
+    inputs = nli_tokenizer.encode_plus(premise, hypothesis, return_tensors='pt')
+
+    # Get the model's predictions
+    outputs = nli_model(**inputs)[0]
+
+    # Get the probabilities by applying the softmax function
+    probs = torch.nn.functional.softmax(outputs, dim=-1)
+
+    # Compute probability of entailment and non-entailment
+    entailment_prob = probs[0, 2].item()
+    # non_entailment_prob = probs[0, 0].item() + probs[0, 1].item()
+
+    return entailment_prob
 
 def Q_A_eval(question: str, given_answer: str, sentences: list):
     # Initialize the QA model
@@ -344,87 +399,7 @@ def relevance_score(dialogue):
     scaled_score = (sum(local_relevance_scores)/len(local_relevance_scores)) * 10
     return scaled_score
 
-def sentences_match(sentence1: str, sentence2: str) -> float:
-    # Tokenize both sentences
-    tokens1 = nltk.word_tokenize(sentence1)
-    tokens2 = nltk.word_tokenize(sentence2)
-
-    # Initialize a SequenceMatcher with the tokens
-    sequence_matcher = difflib.SequenceMatcher(None, tokens1, tokens2)
-
-    # Get the similarity ratio
-    similarity_score = sequence_matcher.ratio()
-
-    return similarity_score
-
-def Q_A_eval4(question: str, given_answer: str, sentences: list):
-    # Initialize the QA model
-    repetition = sentences_match(question,given_answer)
-    if not question:
-        print('Empty question was given as input.')
-        return 0,"",0,repetition
-    # if not is_question_answerable(sentences,question): #not need another model to see whether answerable or not
-    #     return 0
-
-    # qa_model = pipeline('question-answering', model = 'deepset/deberta-v3-large-squad2')
-    # nli_model = AutoModelForSequenceClassification.from_pretrained('roberta-large-mnli')
-    # nli_tokenizer = AutoTokenizer.from_pretrained('roberta-large-mnli')
-    
-    # Join all sentences into a single context
-    context = ' '.join(sentences)
-
-    
-
-    # Use the QA model to predict the answer from the context
-    output = qa_model(question=question, context=context)
-    print('qa_output',output)
-    # Store the predicted answer
-    predicted_answer = output['answer']
-
-    if not predicted_answer.strip():  #if cannot predict any answer, return 0 #or output['score'] < some_threshold:
-        return 0,predicted_answer,0
-    # Check the token-level similarity
-    similarity_score = sentences_match(given_answer, predicted_answer)
-    if similarity_score > 0.8:
-        return 1,predicted_answer,similarity_score,repetition
-
-    # Prepare the inputs for the NLI model
-    premise = given_answer
-    hypothesis = predicted_answer
-
-    # Encode the inputs
-    inputs = nli_tokenizer.encode_plus(premise, hypothesis, return_tensors='pt')
-
-    # Get the model's predictions
-    outputs = nli_model(**inputs)[0]
-
-    # Get the probabilities by applying the softmax function
-    probs = torch.nn.functional.softmax(outputs, dim=-1)
-
-    # Get the max probability's index (0: contradiction, 1: neutral, 2: entailment)
-    max_index = torch.argmax(probs).item()
-
-    # Check the prediction and return the appropriate score
-    entailment_similarity_threshold = 0.4
-    neutral_similarity_threshold = 0.05 #since we find similarity cannot directly reflect the quality of results,we say if there is acutally 5% overlap, it should have some factual consistence, we assign 0.5,which conresponding to human judgement.
-    if max_index == 2:  # entailment
-        print('entailment')
-        if similarity_score >= entailment_similarity_threshold:
-            return 1,predicted_answer,similarity_score,repetition
-        else:
-            return 0.5 , predicted_answer,similarity_score,repetition
-        # return 1,predicted_answer
-    elif max_index == 1:  # neutral
-        if similarity_score >= neutral_similarity_threshold:
-            return 0.5,predicted_answer,similarity_score,repetition
-        else:
-            return 0,predicted_answer,similarity_score,repetition
-    elif max_index == 0:  # contradiction
-        return 0,predicted_answer,similarity_score,repetition
-    else:
-        return 0,predicted_answer,similarity_score,repetition  # this should never happen
-#############################################################################################
-file_path = '/cluster/scratch/wangjun/dialogue_inpainting5_18_flan_lora_xl/work/ukp/huggingface/7_5_keyword_algebra_search/HuggingfaceSearchJob.ZWwmWH3h9ttu/output/search_output_post.json'
+file_path = '/cluster/scratch/wangjun/filtering_result/math_student_filter.json'
 
 data = []
 with open(file_path, 'r') as f:
@@ -442,38 +417,107 @@ score_data = []
 # random.seed(123)
 # selected_data = random.sample(data, 100)
 selected_data = data
-count = 0
-for obj in selected_data:
+# count = 0
+# for obj in selected_data:
+#     dialog = obj['utterances']
+#     sentences = obj['sentences'] #used by q&a prediction model
+#     count += 1
+#     print('dialog count = ', count)
+#     # print(dialog)
+#     if dialog == []:continue
+#     tuples = [dialog[i:i+2] for i in range(0, len(dialog), 2)]
+#     for tuple_ in tuples:
+#         score_dict = {}
+#         score_dict['tuple'] = tuple_
+#         # score_dict['relevance'] = relevance_score(tuple_)
+#         # score_dict['flesch_reading_ease'] = flesch_reading_ease(tuple_)
+#         # score_dict['bigram_entropy'] = calculate_bigram_entropy(tuple_)
+#         # score_dict['is_general'] = is_general_question(tuple_[0])
+#         # score_dict['distinct_3'] = distinct_3(tuple_[0])
+#         # score_dict['toxicity'] = calculate_toxicity(tuple_[0])
+#         score_dict['QFactScore'] = Q_A_eval5_entailment_score(tuple_[0],tuple_[1],sentences)
+#         # score_dict['correctness'] = calculate_correctness_score(tuple_)
+#         # score_dict['coherence'] = calculate_coherence_score(tuple_)
+#         # Append the dictionary to the score_data list
+#         score_data.append(score_dict)
+
+# # Convert the list of dictionaries to a DataFrame
+# df = pd.DataFrame(score_data)
+
+# df.to_csv('flant5xl_social_metrics.csv')
+# # Calculate the average scores and append them to the DataFrame
+# # df['toxicity'] = df['toxicity'].replace({None: pd.NA}).astype(float)  # replace None with NaN and ensure data type is float
+# # avg_scores = df[['relevance', 'flesch_reading_ease', 'bigram_entropy', 'is_general', 'distinct_3', 'toxicity','Q_A_eval']].mean(skipna=True)
+# avg_scores = df[['QFactScore']].mean(skipna=True)
+# df.loc['Average'] = ['Average'] + avg_scores.tolist()
+
+# print(df)
+# df.to_csv('/cluster/home/wangjun/dialog_inpainting/dialog_inpainting_implementation/code/output/8_16_qfactscore_calculation/flant5xl_social_metrics.csv')
+
+import os
+OUTPUT_FILE = '/cluster/home/wangjun/dialog_inpainting/dialog_inpainting_implementation/code/output/8_16_qfactscore_calculation/filter_compare/flant5xl_math_metrics_before_post_student_filter.csv'
+SAVE_INTERVAL = 10
+
+# Initialize an output file
+if not os.path.exists(OUTPUT_FILE):
+    with open(OUTPUT_FILE, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["dialog_index", "tuple", "QFactScore"])
+
+def get_starting_point():
+    if os.path.exists(OUTPUT_FILE):
+        try:
+            # Load the CSV and determine the last dialog index processed
+            existing_df = pd.read_csv(OUTPUT_FILE)
+            if 'dialog_index' in existing_df.columns and not existing_df['dialog_index'].isna().all():
+                last_processed_index = existing_df['dialog_index'].max()
+                
+                # Explicitly handle the case where the max() returns NaN
+                if pd.isna(last_processed_index):
+                    return 0
+                
+                return int(last_processed_index) + 1
+        except pd.errors.EmptyDataError:
+            # If the file is empty, start from the beginning
+            return 0
+    return 0
+
+
+start_index = get_starting_point()
+print('start index = ',start_index)
+processed_dialogs_count = 0
+
+for index, obj in enumerate(selected_data[start_index:], start=start_index):
     dialog = obj['utterances']
-    sentences = obj['sentences'] #used by q&a prediction model
-    count += 1
-    print('dialog count = ', count)
-    # print(dialog)
+    sentences = obj['sentences']
+
     if dialog == []:continue
     tuples = [dialog[i:i+2] for i in range(0, len(dialog), 2)]
     for tuple_ in tuples:
         score_dict = {}
+        score_dict['dialog_index'] = index
         score_dict['tuple'] = tuple_
-        # score_dict['relevance'] = relevance_score(tuple_)
-        # score_dict['flesch_reading_ease'] = flesch_reading_ease(tuple_)
-        # score_dict['bigram_entropy'] = calculate_bigram_entropy(tuple_)
-        # score_dict['is_general'] = is_general_question(tuple_[0])
-        # score_dict['distinct_3'] = distinct_3(tuple_[0])
-        # score_dict['toxicity'] = calculate_toxicity(tuple_[0])
-        score_dict['Q_A_eval4'] = Q_A_eval4(tuple_[0],tuple_[1],sentences)
-        # score_dict['correctness'] = calculate_correctness_score(tuple_)
-        # score_dict['coherence'] = calculate_coherence_score(tuple_)
-        # Append the dictionary to the score_data list
+        score_dict['QFactScore'] = Q_A_eval5_entailment_score(tuple_[0],tuple_[1],sentences)
         score_data.append(score_dict)
 
-# Convert the list of dictionaries to a DataFrame
-df = pd.DataFrame(score_data)
+    processed_dialogs_count += 1
 
-# Calculate the average scores and append them to the DataFrame
-# df['toxicity'] = df['toxicity'].replace({None: pd.NA}).astype(float)  # replace None with NaN and ensure data type is float
-# avg_scores = df[['relevance', 'flesch_reading_ease', 'bigram_entropy', 'is_general', 'distinct_3','Q_A_eval']].mean(skipna=True)
-# df.loc['Average'] = ['Average'] + avg_scores.tolist()
-avg_scores = df[['Q_A_eval4']].mean(skipna=True)
-df.loc['Average'] = ['Average'] + avg_scores.tolist()
+    # Append results every SAVE_INTERVAL dialogs processed
+    if processed_dialogs_count % SAVE_INTERVAL == 0:
+        temp_df = pd.DataFrame(score_data)
+        temp_df.to_csv(OUTPUT_FILE, mode='a', header=False, index=False)
+        print('processed_dialogs_count = ',processed_dialogs_count)
+        # Clear the score_data to avoid duplicating entries
+        score_data.clear()
+
+# After processing all data, if there's still remaining data in score_data, append it to the file
+if score_data:
+    temp_df = pd.DataFrame(score_data)
+    temp_df.to_csv(OUTPUT_FILE, mode='a', header=False, index=False)
+
+# Compute the average scores and print the results
+df = pd.read_csv(OUTPUT_FILE)
+avg_scores = df[['QFactScore']].mean(skipna=True)
+df.loc['Average'] = [None, 'Average'] + avg_scores.tolist()
 print(df)
-df.to_csv('7_27_qa_eval_key+post_math.csv')
+df.to_csv(OUTPUT_FILE, index=False)
